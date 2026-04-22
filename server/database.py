@@ -1,4 +1,3 @@
-import hmac
 import os
 import sqlite3
 import threading
@@ -161,37 +160,28 @@ class Database:
         self._ensure_open()
         with self.lock:
             cursor = self.conn.cursor()
-            cursor.execute('SELECT id, username, password FROM users WHERE password IS NOT NULL')
+            cursor.execute("SELECT id, username, password FROM users WHERE password IS NOT NULL")
             users = cursor.fetchall()
-        
-        for user_id, username, hashed_password in users:
-            if self._matches_password(user_id, password, hashed_password):
-                return (user_id, username)
-        return None
 
-    def _matches_password(self, user_id, password, stored_password):
+        password_bytes = str(password or "").encode("utf-8")
+        matched_user = None
+        for user_id, username, hashed_password in users:
+            if self._matches_password(password_bytes, hashed_password):
+                matched_user = (user_id, username)
+
+        return matched_user
+
+    def _matches_password(self, password_bytes, stored_password):
         if not stored_password:
             return False
 
-        password = str(password or "")
         if stored_password.startswith(("$2a$", "$2b$", "$2y$")):
             try:
-                return bcrypt.checkpw(password.encode("utf-8"), stored_password.encode("utf-8"))
+                return bcrypt.checkpw(password_bytes, stored_password.encode("utf-8"))
             except ValueError:
                 return False
 
-        if hmac.compare_digest(password, stored_password):
-            self._upgrade_plaintext_password(user_id, password)
-            return True
         return False
-
-    def _upgrade_plaintext_password(self, user_id, password):
-        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-        with self.lock:
-            cursor = self.conn.cursor()
-            cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user_id))
-            self.conn.commit()
-            self._secure_file_permissions()
 
     def get_all_users(self):
         self._ensure_open()

@@ -86,7 +86,7 @@ class TestDashboardAlert(unittest.TestCase):
 
         self.assertIsNone(self.db.verify_password("1234"))
 
-    def test_plaintext_password_is_upgraded_after_successful_match(self):
+    def test_plaintext_password_is_no_longer_supported(self):
         cursor = self.db.conn.cursor()
         cursor.execute(
             "INSERT INTO users (username, nfc_uid, password) VALUES (?, ?, ?)",
@@ -96,11 +96,7 @@ class TestDashboardAlert(unittest.TestCase):
 
         user = self.db.verify_password("1234")
 
-        self.assertIsNotNone(user)
-        cursor.execute("SELECT password FROM users WHERE username = ?", ("LegacyUser",))
-        stored_password = cursor.fetchone()[0]
-        self.assertNotEqual(stored_password, "1234")
-        self.assertTrue(stored_password.startswith(("$2a$", "$2b$", "$2y$")))
+        self.assertIsNone(user)
 
     def test_close_is_idempotent(self):
         self.db.close()
