@@ -1,0 +1,80 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+venv/
+
+# Local runtime data
+*.log
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*_backup.db
+data/
+logs/
+captures/
+snapshots/
+uploads/
+server/uploads/
+server/cert.pem
+server/key.pem
+server/*.pem
+*.key
+*.crt
+
+# Model weights and generated vision artifacts
+models/*.pt
+models/*.onnx
+models/*.engine
+models/*.bin
+models/*.xml
+runs/
+
+# Arduino local build output and old sketches
+arduino/build/
+arduino/**/*.hex
+arduino/**/*.elf
+arduino/arduino_firmware.ino
+arduino/doorlock_firmware/
+
+# Local environment
+.env
+.env.*
+
+# Tool-specific working notes and generated handoff files
+CLAUDE.md
+GEMINI.md
+agents.md
+run_agent_hw.py
+WORKSPACE_MAP.txt
+HANDOVER.md
+SIGN_OFF.txt
+PROJECT_CERTIFICATE.md
+CONTRIBUTING.md
+MAINTENANCE.md
+ROADMAP.md
+VERSION.txt
+FINAL_*.md
+FINAL_*.txt
+final_audit.py
+final_check.py
+plan.md
+docs/review_response.md
+프로젝트_최종보고서_*.md
+작년선배작품_보고서_*.pdf

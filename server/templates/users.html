@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - Doorlock</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">2FA Doorlock</a>
+            <div>
+                <a href="/register" class="btn btn-outline-light btn-sm">Add User</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-primary">Users</h5>
+                        <a href="/" class="btn btn-sm btn-link">Back to Logs</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">ID</th>
+                                        <th>Username</th>
+                                        <th>NFC UID</th>
+                                        <th class="text-end pe-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-body">
+                                    <tr><td colspan="4" class="text-center py-4">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const escapeHtml = (value) => {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(value ?? '').replace(/[&<>"']/g, (char) => map[char]);
+        };
+
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                const tableBody = document.getElementById('user-body');
+                
+                tableBody.innerHTML = '';
+                if (users.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No users yet.</td></tr>';
+                    return;
+                }
+
+                users.forEach((user) => {
+                    const row = tableBody.insertRow();
+                    const userId = Number(user.id);
+                    row.innerHTML = `
+                        <td class="ps-4 text-muted">${escapeHtml(userId)}</td>
+                        <td class="fw-bold">${escapeHtml(user.username)}</td>
+                        <td>${escapeHtml(user.nfc_uid || '-')}</td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                        </td>
+                    `;
+                    row.querySelector('button').addEventListener('click', () => deleteUser(userId, user.username));
+                });
+            } catch (err) {
+                console.error("Failed to fetch users:", err);
+            }
+        }
+
+        async function deleteUser(id, name) {
+            if (!confirm(`Delete user "${name}"? Face data will also be removed.`)) return;
+            
+            try {
+                const resp = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+                const result = await resp.json();
+                if (result.success) {
+                    alert(result.message);
+                    fetchUsers();
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (err) {
+                console.error("Failed to delete user:", err);
+            }
+        }
+        
+        window.onload = fetchUsers;
+    </script>
+</body>
+</html>
