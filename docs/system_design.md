@@ -44,27 +44,63 @@ graph TB
 ## 3. 처리 흐름
 ```mermaid
 flowchart TD
-    Start([입력 감지]) --> Parse["WAKEUP:NFC 또는 WAKEUP:PW 파싱"]
-    Parse --> Lockdown{"최근 1시간<br/>실패 10회 이상?"}
-    Lockdown -- 예 --> Hold["입력 무시<br/>5초 대기"] --> End([거부])
-    Lockdown -- 아니오 --> Rate{"최근 실패 후<br/>3초 미만?"}
-    Rate -- 예 --> End
-    Rate -- 아니오 --> First["Database로<br/>NFC UID 또는 PIN 확인"]
-    First -- 실패 --> Snap1["카메라 가능 시 사진 저장"] --> Log1["UNAUTHORIZED 기록"] --> Alert1["알림 전송"] --> End
-    First -- 통과 --> Log2["1ST_AUTH_SUCCESS 기록"] --> FaceData{"얼굴 정보<br/>등록됨?"}
-    FaceData -- 아니오 --> Log3["FINAL_FAIL 기록"] --> Alert2["알림 전송"] --> End
-    FaceData -- 예 --> Gate["YOLO nano 검사<br/>얼굴 + 기기 + 눈깜빡임"]
-    Gate --> Device{"휴대폰/화면<br/>감지됨?"}
-    Device -- 예 --> Log3
-    Device -- 아니오 --> Blink{"open-close-open<br/>눈깜빡임 확인?"}
-    Blink -- 아니오 --> Log3
-    Blink -- 예 --> Crop["얼굴 부분 자르기"]
-    Crop --> Match{"자른 얼굴이<br/>등록 정보와 일치?"}
-    Match -- 아니오 --> Log3
-    Match -- 예 --> Open["OPEN_DOOR 전송"] --> Log4["FINAL_SUCCESS 기록"] --> Done([문 열림])
+    subgraph Input_Layer ["입력 및 파싱 계층"]
+        Start([입력 감지]) --> Parse["WAKEUP:NFC 또는 WAKEUP:PW 파싱"]
+    end
+
+    subgraph Security_Check ["기본 보안 검증 계층"]
+        Parse --> Lockdown{"최근 1시간<br/>실패 10회 이상?"}
+        Lockdown -- 예 --> Hold["입력 무시<br/>5초 대기"] --> End([거부])
+        Lockdown -- 아니오 --> Rate{"최근 실패 후<br/>3초 미만?"}
+        Rate -- 예 --> End
+    end
+
+    subgraph Auth_First ["1차 인증 (DB)"]
+        Rate -- 아니오 --> First["Database로<br/>NFC UID 또는 PIN 확인"]
+        First -- 실패 --> Snap1["카메라 가능 시 사진 저장"] --> Log1["UNAUTHORIZED 기록"] --> Alert1["알림 전송"] --> End
+        First -- 통과 --> Log2["1ST_AUTH_SUCCESS 기록"] --> FaceData{"얼굴 정보<br/>등록됨?"}
+        FaceData -- 아니오 --> Log3["FINAL_FAIL 기록"] --> Alert2["알림 전송"] --> End
+    end
+
+    subgraph Auth_Second ["2차 인증 (Vision AI)"]
+        FaceData -- 예 --> Gate["YOLO nano 검사<br/>얼굴 + 기기 + 눈깜빡임"]
+        Gate --> Device{"휴대폰/화면<br/>감지됨?"}
+        Device -- 예 --> Log3
+        Device -- 아니오 --> Blink{"open-close-open<br/>눈깜빡임 확인?"}
+        Blink -- 아니오 --> Log3
+        Blink -- 예 --> Crop["얼굴 부분 자르기"]
+        Crop --> Match{"자른 얼굴이<br/>등록 정보와 일치?"}
+        Match -- 아니오 --> Log3
+    end
+
+    subgraph Output_Layer ["출력 및 릴레이 제어"]
+        Match -- 예 --> Open["OPEN_DOOR 전송"] --> Log4["FINAL_SUCCESS 기록"] --> Done([문 열림])
+    end
 ```
 
-## 4. 개발 일정
+## 4. 웹 기반 사용자 등록 흐름 (Web GUI)
+```mermaid
+sequenceDiagram
+    participant Admin as 웹 관리자
+    participant Web as FastAPI (web_app.py)
+    participant Vision as VisionAI (vision_ai.py)
+    participant DB as Database (SQLite)
+
+    Admin->>Web: /register 접속
+    Web-->>Admin: HTML 양식 반환 (이름, PIN, NFC 등)
+    Admin->>Web: 1. 얼굴 사진 캡처 요청 (/api/capture_face)
+    Web->>Vision: capture_face_encoding()
+    Vision->>Vision: 카메라 프레임 확보 및 얼굴 검출
+    Vision-->>Web: 얼굴 인코딩 데이터 (bytes) 반환
+    Web-->>Admin: 캡처 성공 메시지
+    Admin->>Web: 2. 폼 제출 (/api/register) <br/>(이름, NFC UID, PIN)
+    Web->>Web: 유효성 검증 (validate_registration)
+    Web->>DB: add_user(이름, NFC, 비밀번호, 얼굴 인코딩)
+    DB-->>Web: 등록 성공 (user_id 반환)
+    Web-->>Admin: 등록 완료 메시지
+```
+
+## 5. 개발 일정
 ```mermaid
 gantt
     title 개발 및 보안 강화 일정
