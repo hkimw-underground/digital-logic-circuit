@@ -80,11 +80,11 @@ async def video_feed():
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="register.html")
 
 @app.post("/api/capture_face")
 async def capture_face():
@@ -96,7 +96,7 @@ async def capture_face():
 
 @app.get("/users_page", response_class=HTMLResponse)
 async def users_page(request: Request):
-    return templates.TemplateResponse("users.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="users.html")
 
 @app.get("/api/users")
 async def get_users():
