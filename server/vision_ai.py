@@ -1,10 +1,8 @@
-import pickle
 import time
 from dataclasses import dataclass
 
 from config import (
     ALLOW_UNENROLLED_FACE,
-    ALLOW_LEGACY_FACE_PICKLE,
     FACE_MATCH_TOLERANCE,
     VISION_MOCK,
     YOLO_CLOSED_EYE_CLASSES,
@@ -401,14 +399,7 @@ class VisionAI:
                 raise ValueError("Invalid face encoding length.")
             return np.frombuffer(raw, dtype=np.float64).copy()
 
-        if not ALLOW_LEGACY_FACE_PICKLE:
-            raise ValueError("Legacy pickle face encoding is disabled.")
-
-        legacy_encoding = pickle.loads(encoding_bytes)
-        array = np.asarray(legacy_encoding, dtype=np.float64)
-        if array.shape != (self.FACE_ENCODING_SIZE,):
-            raise ValueError("Invalid legacy face encoding shape.")
-        return array
+        raise ValueError("Invalid or legacy face encoding format detected. Pickle is no longer supported.")
 
     def capture_face_encoding(self):
         if self.mock:
