@@ -58,7 +58,10 @@
                                 <label class="form-label">Password (PIN)</label>
                                 <input type="password" id="password" class="form-control" placeholder="Enter 4-8 digit PIN" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="new-password" required>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100 mt-3">Save User</button>
+                            <button type="submit" id="btnSubmit" class="btn btn-primary w-100 mt-3">
+                                <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <span id="submitText">Save User</span>
+                            </button>
                         </form>
                         <div id="msg" class="mt-3 text-center"></div>
                         <div class="text-center mt-3">
@@ -117,27 +120,45 @@
                 if (!confirm("Face has not been captured yet. Continue anyway?")) return;
             }
 
+            const btnSubmit = document.getElementById('btnSubmit');
+            const submitSpinner = document.getElementById('submitSpinner');
+            const submitText = document.getElementById('submitText');
+
+            btnSubmit.disabled = true;
+            submitSpinner.classList.remove('d-none');
+            submitText.textContent = 'Saving...';
+
             const data = {
                 name: document.getElementById('name').value,
                 nfc_uid: document.getElementById('nfc_uid').value,
                 password: document.getElementById('password').value
             };
             
-            const resp = await fetch('/api/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            
-            const result = await resp.json();
-            const msgDiv = document.getElementById('msg');
-            if (result.success) {
-                setAlertMessage(msgDiv, true, result.message);
-                document.getElementById('regForm').reset();
-                document.getElementById('captureMsg').textContent = "";
-                faceCaptured = false;
-            } else {
-                setAlertMessage(msgDiv, false, result.message);
+            try {
+                const resp = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                const result = await resp.json();
+                const msgDiv = document.getElementById('msg');
+                if (result.success) {
+                    setAlertMessage(msgDiv, true, result.message);
+                    document.getElementById('regForm').reset();
+                    document.getElementById('captureMsg').textContent = "";
+                    faceCaptured = false;
+                } else {
+                    setAlertMessage(msgDiv, false, result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                const msgDiv = document.getElementById('msg');
+                setAlertMessage(msgDiv, false, "Network error occurred.");
+            } finally {
+                btnSubmit.disabled = false;
+                submitSpinner.classList.add('d-none');
+                submitText.textContent = 'Save User';
             }
         };
     </script>

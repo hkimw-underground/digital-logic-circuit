@@ -78,19 +78,31 @@
                         <td class="fw-bold">${escapeHtml(user.username)}</td>
                         <td>${escapeHtml(user.nfc_uid || '-')}</td>
                         <td class="text-end pe-4">
-                            <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                            <button class="btn btn-outline-danger btn-sm delete-btn" type="button" aria-label="Delete user ${escapeHtml(user.username)}">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <span class="btn-text">Delete</span>
+                            </button>
                         </td>
                     `;
-                    row.querySelector('button').addEventListener('click', () => deleteUser(userId, user.username));
+                    row.querySelector('.delete-btn').addEventListener('click', function() {
+                        deleteUser(userId, user.username, this);
+                    });
                 });
             } catch (err) {
                 console.error("Failed to fetch users:", err);
             }
         }
 
-        async function deleteUser(id, name) {
+        async function deleteUser(id, name, btnElement) {
             if (!confirm(`Delete user "${name}"? Face data will also be removed.`)) return;
             
+            const spinner = btnElement.querySelector('.spinner-border');
+            const btnText = btnElement.querySelector('.btn-text');
+
+            btnElement.disabled = true;
+            spinner.classList.remove('d-none');
+            btnText.textContent = 'Deleting...';
+
             try {
                 const resp = await fetch(`/api/users/${id}`, { method: 'DELETE' });
                 const result = await resp.json();
@@ -102,6 +114,13 @@
                 }
             } catch (err) {
                 console.error("Failed to delete user:", err);
+                alert("Network error occurred.");
+            } finally {
+                if (document.body.contains(btnElement)) {
+                    btnElement.disabled = false;
+                    spinner.classList.add('d-none');
+                    btnText.textContent = 'Delete';
+                }
             }
         }
         

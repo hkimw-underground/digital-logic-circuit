@@ -150,6 +150,7 @@
                         button.className = 'btn btn-sm btn-outline-danger py-0';
                         button.type = 'button';
                         button.textContent = 'View';
+                        button.setAttribute('aria-label', `View snapshot for log from ${escapeHtml(log.timestamp)}`);
                         button.addEventListener('click', () => showSnapshot(logId));
                         snapshotCell.appendChild(button);
                     } else {
