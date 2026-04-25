@@ -94,21 +94,14 @@ class TestVisionYoloGate(unittest.TestCase):
         self.assertTrue(encoded.startswith(VisionAI.FACE_ENCODING_PREFIX))
         np.testing.assert_array_equal(decoded, encoding)
 
-    def test_legacy_pickle_face_encoding_is_rejected_by_default(self):
+    def test_legacy_pickle_face_encoding_is_permanently_rejected(self):
         vision = self.make_vision()
         encoding = np.arange(128, dtype=np.float64)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             vision._deserialize_face_encoding(pickle.dumps(encoding))
 
-    def test_legacy_pickle_face_encoding_can_be_enabled_for_migration(self):
-        vision = self.make_vision()
-        encoding = np.arange(128, dtype=np.float64)
-
-        with patch("vision_ai.ALLOW_LEGACY_FACE_PICKLE", True):
-            decoded = vision._deserialize_face_encoding(pickle.dumps(encoding))
-
-        np.testing.assert_array_equal(decoded, encoding)
+        self.assertIn("Pickle is no longer supported", str(context.exception))
 
     def test_invalid_face_encoding_length_is_rejected(self):
         vision = self.make_vision()
