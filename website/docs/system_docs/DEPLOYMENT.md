@@ -1,7 +1,7 @@
 # 배포 가이드
 
 ## 1. 하드웨어
-1. [하드웨어 사양](docs/hardware_spec.md)에 맞춰 회로를 배선한다.
+1. [하드웨어 사양](hardware_spec.md)에 맞춰 회로를 배선한다.
 2. `arduino/doorlock.ino`를 업로드한다.
 3. Serial Monitor를 `9600` baud로 열고 `SYSTEM_READY`를 확인한다.
 4. Python 서버 실행 전 Serial Monitor를 닫는다. 시리얼 포트는 한 프로세스만 사용할 수 있다.

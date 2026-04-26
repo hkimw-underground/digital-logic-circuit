@@ -2,6 +2,7 @@
 const sidebars = {
   tutorialSidebar: [
     'intro',
+    'README',
     {
       type: 'category',
       label: '우리는 이렇게 개발했다',
@@ -21,7 +22,9 @@ const sidebars = {
         'system_docs/EASY_GUIDE',
         'system_docs/architecture_mindmap',
         'system_docs/latex_tikz_source',
+        'system_docs/DEPLOYMENT',
         'SECURITY_ANALYSIS',
+        'SECURITY_REPORT',
         'TROUBLESHOOTING',
       ],
     },
@@ -31,6 +34,14 @@ const sidebars = {
       items: [
         'system_docs/DEVELOPMENT_PLAN',
         'system_docs/PRESENTATION_GUIDE',
+        'system_docs/REVIEW',
+      ],
+    },
+    {
+      type: 'category',
+      label: '모델',
+      items: [
+        'system_docs/models/README',
       ],
     },
     {
