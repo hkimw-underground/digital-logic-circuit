@@ -6,9 +6,9 @@ const sidebars = {
       type: 'category',
       label: '우리는 이렇게 개발했다',
       items: [
-        'history/01_vibe_coding_journey',
-        'history/02_security_fix_case',
-        'history/03_hardware_integration',
+        'history/vibe_coding_journey',
+        'history/security_fix_case',
+        'history/hardware_integration',
       ],
     },
     {
@@ -21,6 +21,8 @@ const sidebars = {
         'system_docs/EASY_GUIDE',
         'system_docs/architecture_mindmap',
         'system_docs/latex_tikz_source',
+        'SECURITY_ANALYSIS',
+        'TROUBLESHOOTING',
       ],
     },
     {
@@ -33,13 +35,21 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: '코드 모듈 가이드',
+      items: [
+        'code_docs/server_modules',
+        'code_docs/arduino_modules',
+      ],
+    },
+    {
+      type: 'category',
       label: '바이브 코딩 프롬프트',
       items: [
         'vibe_prompts/main_prompt',
-        'vibe_prompts/sub_prompts/01_joint_development',
-        'vibe_prompts/sub_prompts/02_arduino_dev',
-        'vibe_prompts/sub_prompts/03_python_opt',
-        'vibe_prompts/sub_prompts/04_beta_test',
+        'vibe_prompts/sub_prompts/joint_development',
+        'vibe_prompts/sub_prompts/arduino_dev',
+        'vibe_prompts/sub_prompts/python_opt',
+        'vibe_prompts/sub_prompts/beta_test',
       ],
     },
   ],
