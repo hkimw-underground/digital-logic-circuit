@@ -100,7 +100,7 @@ export DOORLOCK_WEB_PORT=8000
 ## 하드웨어
 
 1. Arduino IDE에서 `MFRC522`, `Keypad` 라이브러리를 설치한다.
-2. [하드웨어 사양](docs/hardware_spec.md)의 핀맵대로 배선한다.
+2. [하드웨어 사양](system_docs/hardware_spec.md)의 핀맵대로 배선한다.
 3. `arduino/doorlock.ino`를 업로드한다.
 4. 서버의 `DOORLOCK_SERIAL_PORT`를 실제 포트로 설정한다.
 
@@ -156,11 +156,11 @@ python3 -B -m unittest discover -s server -p 'test*.py'
 
 ## 핵심 문서 라이브러리
 
-- **[초보자 정복 가이드](docs/EASY_GUIDE.md): 입문자를 위한 용어 해설 및 작동 원리**
-- **[개발 일정 및 역할](docs/DEVELOPMENT_PLAN.md): 팀원별 역할 분담 및 상세 To-Do 리스트**
-- **[발표 자료 구성안](docs/PRESENTATION_GUIDE.md): PPT 제작을 위한 슬라이드별 가이드**
+- **[초보자 정복 가이드](system_docs/EASY_GUIDE.md): 입문자를 위한 용어 해설 및 작동 원리**
+- **[개발 일정 및 역할](system_docs/DEVELOPMENT_PLAN.md): 팀원별 역할 분담 및 상세 To-Do 리스트**
+- **[발표 자료 구성안](system_docs/PRESENTATION_GUIDE.md): PPT 제작을 위한 슬라이드별 가이드**
 - **[바이브 코딩 프롬프트](vibe_prompts/main_prompt.md): 개발 가속화를 위한 AI 프롬프트 세트**
-- [시스템 설계 상세](docs/system_design.md)
-- [하드웨어 배선 및 사양](docs/hardware_spec.md)
+- [시스템 설계 상세](system_docs/system_design.md)
+- [하드웨어 배선 및 사양](system_docs/hardware_spec.md)
 - [보안 취약점 분석](SECURITY_ANALYSIS.md)
 - [문제 해결 가이드](TROUBLESHOOTING.md)
