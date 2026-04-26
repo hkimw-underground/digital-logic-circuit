@@ -4,6 +4,15 @@ const sidebars = {
     'intro',
     {
       type: 'category',
+      label: '우리는 이렇게 개발했다',
+      items: [
+        'history/01_vibe_coding_journey',
+        'history/02_security_fix_case',
+        'history/03_hardware_integration',
+      ],
+    },
+    {
+      type: 'category',
       label: '시스템 문서',
       items: [
         'system_docs/system_design',
