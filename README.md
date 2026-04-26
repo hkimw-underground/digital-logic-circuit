@@ -1,20 +1,19 @@
-# 2FA 스마트 도어락
+# 2FA 스마트 도어락: 지능형 이중 인증 시스템
 
-SYU - Sahmyook University
-디지털 논리 회로 실습: 캡스톤디자인 브레드보드팀
+SYU - Sahmyook University 디지털 논리 회로 실습 캡스톤디자인
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Web_GUI-009688)
 ![YOLO](https://img.shields.io/badge/YOLO-Vision_AI-yellow)
 ![SQLite](https://img.shields.io/badge/SQLite-Database-003B57)
 
-NFC 또는 PIN으로 사용자를 먼저 확인하고, 카메라로 얼굴을 한 번 더 확인하는 **강력한 2FA 스마트 도어락 시스템**입니다. Arduino는 입력(NFC, 키패드)과 릴레이 제어를 담당하며, Python 서버는 인증 흐름, 시스템 로그, 웹 GUI, 비전 AI(얼굴 확인)를 관장합니다.
+NFC/PIN 1차 인증과 YOLOv8 기반 얼굴 인식 2차 인증을 결합한 고성능 스마트 도어락 시스템입니다. 본 프로젝트는 보안의 세 가지 요소 중 '소유(NFC)', '지식(PIN)', '존재(얼굴)'를 결합하여 빈틈없는 보안 환경을 구축하는 것을 목표로 합니다.
 
 ```text
-출입 허용 = (정상 NFC 또는 정상 PIN) AND (YOLO 검사 통과 AND 등록 얼굴 일치)
+최종 승인 = (인증 수단 일치) + (생체 감지 통과) + (등록 얼굴 일치)
 ```
 
-> **보안 우선:** 실제 사용 모드에서는 YOLO 모델, 카메라, 등록된 얼굴 정보 중 하나라도 없거나 이상이 감지되면 문을 절대 열지 않습니다.
+> **보안 철학:** 모든 인증 단계는 'Fail-Safe' 원칙을 따릅니다. 인공지능 모델 미로드, 카메라 연결 오류 등 시스템의 불완전한 상태가 감지되면 출입을 즉시 차단하여 잠금 상태를 유지합니다.
 
 ## Features (주요 기능)
 - **이중 인증 (2FA):** 1차 인증(NFC/PIN) + 2차 인증(얼굴 및 눈 깜빡임 인식)
@@ -155,11 +154,13 @@ python3 -B -m unittest discover -s server -p 'test*.py'
 - 웹 등록은 NFC UID를 대문자 hex로 정규화하고 PIN은 4-8자리 숫자로 제한한다.
 - 시리얼 통신은 평문이다. 실제 설치 시 USB와 릴레이 배선은 하우징 안에 둔다.
 
-## 문서
+## 핵심 문서 라이브러리
 
-- [시스템 설계](docs/system_design.md)
-- [하드웨어 사양](docs/hardware_spec.md)
-- [Arduino 설정](docs/arduino_setup.md)
-- [배포 가이드](DEPLOYMENT.md)
-- [보안 분석](SECURITY_ANALYSIS.md)
-- [문제 해결](TROUBLESHOOTING.md)
+- **[초보자 정복 가이드](docs/EASY_GUIDE.md): 입문자를 위한 용어 해설 및 작동 원리**
+- **[개발 일정 및 역할](docs/DEVELOPMENT_PLAN.md): 팀원별 역할 분담 및 상세 To-Do 리스트**
+- **[발표 자료 구성안](docs/PRESENTATION_GUIDE.md): PPT 제작을 위한 슬라이드별 가이드**
+- **[바이브 코딩 프롬프트](vibe_prompts/main_prompt.md): 개발 가속화를 위한 AI 프롬프트 세트**
+- [시스템 설계 상세](docs/system_design.md)
+- [하드웨어 배선 및 사양](docs/hardware_spec.md)
+- [보안 취약점 분석](SECURITY_ANALYSIS.md)
+- [문제 해결 가이드](TROUBLESHOOTING.md)
