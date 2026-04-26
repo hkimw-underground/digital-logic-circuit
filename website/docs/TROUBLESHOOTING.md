@@ -43,6 +43,6 @@
 증상: 카드를 태그하거나 PIN을 입력해도 서버가 반응하지 않는다.
 
 확인:
-- 배선이 `docs/hardware_spec.md`와 일치한다.
+- 배선이 `system_docs/hardware_spec.md`와 일치한다.
 - Arduino 전원 LED가 켜져 있다.
 - Python 서버 실행 전 Serial Monitor에서 `WAKEUP:NFC:<UID>` 또는 `WAKEUP:PW:<PIN>`이 출력된다.
