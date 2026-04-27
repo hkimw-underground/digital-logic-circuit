@@ -56,7 +56,28 @@ arduino/doorlock_firmware/
 # Local environment
 .env
 .env.*
+# AI tool / model related files - block by filename or folder name
+*GEMINI*
+*Gemini*
+*gemini*
 
+*CLAUDE*
+*Claude*
+*claude*
+
+*CODEX*
+*Codex*
+*codex*
+
+*JULES*
+*Jules*
+*jules*
+GEMINI_prompt.md
+my_gemini_notes.txt
+CLAUDE_CODE_GUIDE.md
+claude-output/
+Codex_test.py
+jules_result.md
 # Tool-specific working notes and generated handoff files
 CLAUDE.md
 GEMINI.md
