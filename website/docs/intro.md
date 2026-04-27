@@ -1,67 +1,37 @@
 ---
-id: intro
-title: "2FA 스마트 도어락"
-sidebar_label: "프로젝트 소개"
 sidebar_position: 1
 ---
 
-현관문 열쇠 하나면 안전할까요? 열쇠를 잃어버리거나 복사당하면 집 안이 그대로 열립니다. 이 프로젝트는 그 문제를 해결합니다. NFC 카드와 PIN 번호로 1차 확인을 하고, 인공지능 얼굴 인식으로 2차 확인을 거쳐야만 문이 열리는 **이중 인증(2FA) 스마트 도어락**입니다.
+# Introduction
 
-## 전체 동작 흐름
+## 2FA Smart Door Lock System
 
-```mermaid
-flowchart TD
-    A([사용자 접근]) --> B{NFC 카드 또는\nPIN 번호 입력}
-    B --> C{데이터베이스\n일치 확인}
-    C -- 일치하지 않음 --> D[거부\n실패 기록]
-    C -- 일치함 --> E[카메라 활성화]
-    E --> F{YOLO 인공지능\n얼굴 감지}
-    F -- 사진·화면 감지됨 --> G[스푸핑 차단\n알림 전송]
-    F -- 실제 얼굴 감지됨 --> H{눈 깜빡임\n확인}
-    H -- 깜빡임 없음 --> G
-    H -- 깜빡임 확인됨 --> I{등록된 얼굴과\n비교}
-    I -- 일치하지 않음 --> D
-    I -- 일치함 --> J[도어락 열림\n철컥!]
-    D --> K{3회 이상\n연속 실패?}
-    K -- 예 --> L[일정 시간\n입력 차단]
-    K -- 아니오 --> A
-```
+This document serves as the technical report for the experimental **2-Factor Authentication (2FA) Smart Door Lock System**. It provides a comprehensive overview of the system's architecture, hardware implementation, software design, security threat model, and validation results.
 
-## 이 프로젝트는 뭔가요?
+### Problem Statement
 
-삼육대학교 디지털 논리 회로 실습 캡스톤 과제로 제작한 스마트 도어락 시스템입니다. 아두이노로 NFC 카드와 키패드를 제어하고, 파이썬 서버에서 YOLOv8 인공지능이 얼굴을 인식합니다. 두 가지 인증을 모두 통과해야 문이 열리며, 어느 한 단계가 고장나면 잠금 상태를 유지하는 Fail-Safe 원칙을 따릅니다.
+Traditional single-factor authentication door lock systems, such as those relying exclusively on NFC cards or PIN codes, are vulnerable to physical theft, unauthorized sharing, and brute-force attacks. If an unauthorized individual obtains a registered NFC card, they gain unrestricted access.
 
-## 어떤 기술을 사용하나요?
+### Objective and Scope
 
-```mermaid
-mindmap
-  root((2FA 스마트 도어락))
-    하드웨어
-      아두이노 R4
-      MFRC522 NFC 리더
-      4x4 키패드
-      릴레이 도어락
-      웹캠
-    소프트웨어
-      Python FastAPI 서버
-      YOLOv8 얼굴 인식
-      face_recognition 라이브러리
-      SQLite 데이터베이스
-    보안
-      bcrypt 비밀번호 암호화
-      Fail-Safe 잠금 원칙
-      스푸핑 차단
-      연속 실패 차단 Lockdown
-    알림
-      웹 대시보드
-      Discord 웹훅 알림
-```
+The primary objective of this project is to implement an experimental prototype of a 2FA smart door lock system that mitigates the vulnerabilities of single-factor authentication. The system combines:
 
-## 문서 읽는 순서
+1. **Primary Authentication**: "Something you have" or "Something you know" (NFC card or PIN code).
+2. **Secondary Authentication**: "Something you are" (Facial verification via vision AI).
 
-처음 접하는 분은 아래 순서로 읽으면 이해하기 쉽습니다.
+**Scope of Implementation:**
+- A hardware prototype utilizing an Arduino to manage a 125kHz/13.56MHz RFID/NFC reader, a matrix keypad, and a relay module.
+- A centralized backend API for multi-stage authentication, event logging, and serial communication.
+- A computer-vision module for facial verification.
+- A monitoring dashboard to summarize validation attempts and system health.
 
-1. **[2FA 쉽게 이해하기](system_docs/EASY_GUIDE.md)** — 2FA, YOLO, bcrypt 같은 핵심 용어를 비유와 그림으로 설명합니다. 여기부터 시작하세요.
-2. **[시스템 구조 한눈에 보기](system_docs/architecture_mindmap.md)** — 하드웨어와 소프트웨어가 어떻게 연결되는지 전체 구조를 파악합니다.
-3. **[시스템 설계 상세](system_docs/system_design.md)** — 각 구성 요소의 동작 방식을 더 깊이 이해합니다.
-4. **[하드웨어 배선 및 사양](system_docs/hardware_spec.md)** — 실제 배선 방법과 핀 연결 정보를 확인합니다.
+**Out of Scope:**
+- This prototype is **not** a certified commercial access-control product.
+- Advanced commercial-grade anti-spoofing (e.g., depth-sensing 3D cameras).
+- Physical enclosure design resistant to heavy physical tampering.
+
+### Key Results
+
+- **Two-Stage Verification:** Successfully implemented a sequential authentication pipeline where unlocking the relay requires both valid primary credentials and a subsequent positive facial match.
+- **Relay Control:** Established controlled serial communication to command the Arduino relay only upon successful backend validation.
+- **Auditing:** Developed a robust logging mechanism recording all successful and failed access attempts.
