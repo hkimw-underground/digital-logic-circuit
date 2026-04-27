@@ -1,23 +1,12 @@
 // @ts-check
-// `@type` JSDoc annotations allow editor autocompletion and type checking
-// (when paired with `@ts-check`).
-// There are various equivalent ways to declare your Docusaurus config.
-// See: https://docusaurus.io/docs/api/docusaurus-config
 
 import {themes as prismThemes} from 'prism-react-renderer';
 
-// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
-
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: '2FA 스마트 도어락',
-  tagline: '지능형 이중 인증 보안 솔루션',
+  title: '2FA Smart Door Lock System',
+  tagline: 'Technical Report for 2-Factor Authentication Door Lock System',
   favicon: 'img/favicon.ico',
-
-  // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
-  future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
-  },
 
   url: 'https://school-project-hwkim-dev.github.io',
   baseUrl: '/digital-logic-circuit/',
@@ -32,9 +21,6 @@ const config = {
   },
   themes: ['@docusaurus/theme-mermaid'],
 
-  // Even if you don't use internationalization, you can use this field to set
-  // useful metadata like html lang. For example, if your site is Chinese, you
-  // may want to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
@@ -47,24 +33,9 @@ const config = {
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/school-project-hwkim-dev/digital-logic-circuit/tree/main/website/',
+          routeBasePath: 'docs',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          editUrl:
-            'https://github.com/school-project-hwkim-dev/digital-logic-circuit/tree/main/website/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false, // Disable blog for technical report
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -75,25 +46,21 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // Replace with your project's social card
-      image: 'img/docusaurus-social-card.jpg',
       colorMode: {
-        respectPrefersColorScheme: true,
+        defaultMode: 'light',
+        disableSwitch: true, // Force light mode for technical report style
+        respectPrefersColorScheme: false,
       },
       navbar: {
-        title: '2FA 스마트 도어락',
-        logo: {
-          alt: '2FA 스마트 도어락 로고',
-          src: 'img/logo.svg',
-        },
+        title: '2FA Smart Door Lock',
         items: [
           {
             type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
             position: 'left',
-            label: '문서',
+            label: 'Technical Report',
           },
-          {to: '/dashboard', label: '대시보드', position: 'left'},
+          {to: '/dashboard', label: 'Validation Status', position: 'left'},
           {
             href: 'https://github.com/school-project-hwkim-dev/digital-logic-circuit',
             label: 'GitHub',
@@ -105,38 +72,25 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Docs',
+            title: 'Documentation',
             items: [
               {
-                label: 'Tutorial',
-                to: '/docs/intro',
+                label: 'Executive Summary',
+                to: '/docs/executive-summary',
+              },
+              {
+                label: 'System Architecture',
+                to: '/docs/architecture',
+              },
+              {
+                label: 'Validation',
+                to: '/docs/validation/test-plan',
               },
             ],
           },
           {
-            title: 'Community',
+            title: 'Repository',
             items: [
-              {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'X',
-                href: 'https://x.com/docusaurus',
-              },
-            ],
-          },
-          {
-            title: 'More',
-            items: [
-              {
-                label: 'Blog',
-                to: '/blog',
-              },
               {
                 label: 'GitHub',
                 href: 'https://github.com/school-project-hwkim-dev/digital-logic-circuit',
@@ -144,11 +98,13 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} 2FA Smart Door Lock Project.`,
       },
       prism: {
         theme: prismThemes.github,
-        darkTheme: prismThemes.dracula,
+      },
+      mermaid: {
+        theme: {light: 'default', dark: 'dark'},
       },
     }),
 };

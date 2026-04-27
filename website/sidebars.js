@@ -1,74 +1,68 @@
+/**
+ * Creating a sidebar enables you to:
+ - create an ordered group of docs
+ - render a sidebar for each doc of that group
+ - provide next/previous navigation
+
+ The sidebars can be generated from the filesystem, or explicitly defined here.
+ */
+
+// @ts-check
+
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
   tutorialSidebar: [
     'intro',
+    'executive-summary',
+    'problem-objective',
+    'architecture',
+    'authentication-flow',
     {
       type: 'category',
-      label: '개념 이해하기',
-      collapsed: false,
+      label: 'Operation and Usage',
       items: [
-        'system_docs/EASY_GUIDE',
-        'system_docs/architecture_mindmap',
+        'operation/setup',
+        'operation/user-guide',
       ],
     },
     {
       type: 'category',
-      label: '시스템 설계',
-      collapsed: false,
+      label: 'Hardware Implementation',
       items: [
-        'system_docs/system_design',
-        'system_docs/hardware_spec',
-        'system_docs/arduino_setup',
+        'hardware/hardware-overview',
+        'hardware/wiring',
       ],
     },
     {
       type: 'category',
-      label: '코드 구조',
+      label: 'Software System',
       items: [
-        'code_docs/server_modules',
-        'code_docs/arduino_modules',
+        'software/backend',
+        'software/database',
+        'software/serial-protocol',
       ],
     },
     {
       type: 'category',
-      label: '보안',
+      label: 'Security',
       items: [
-        'SECURITY_ANALYSIS',
-        'SECURITY_REPORT',
+        'security/threat-model',
       ],
     },
     {
       type: 'category',
-      label: '개발 스토리',
+      label: 'Validation',
       items: [
-        'history/vibe_coding_journey',
-        'history/security_fix_case',
-        'history/hardware_integration',
+        'validation/test-plan',
+        'validation/limitations',
       ],
     },
     {
       type: 'category',
-      label: '프로젝트 운영',
+      label: 'Appendix',
       items: [
-        'system_docs/DEVELOPMENT_PLAN',
-        'system_docs/REVIEW',
-      ],
-    },
-    {
-      type: 'category',
-      label: '부록',
-      collapsed: true,
-      items: [
-        'TROUBLESHOOTING',
-        'system_docs/DEPLOYMENT',
-        'system_docs/models/README',
-        'system_docs/latex_tikz_source',
-        'system_docs/PRESENTATION_GUIDE',
-        'vibe_prompts/main_prompt',
-        'vibe_prompts/sub_prompts/joint_development',
-        'vibe_prompts/sub_prompts/arduino_dev',
-        'vibe_prompts/sub_prompts/python_opt',
-        'vibe_prompts/sub_prompts/beta_test',
+        'appendix/development-notes',
+        'appendix/ai-assisted-workflow',
       ],
     },
   ],

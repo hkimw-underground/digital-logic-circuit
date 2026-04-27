@@ -1,30 +1,112 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * Custom CSS for Technical Report
+ * Color scheme: White, Light Gray, Navy
  */
 
-/* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-color-primary: #1e3a8a; /* Navy Blue */
+  --ifm-color-primary-dark: #1e3b82;
+  --ifm-color-primary-darker: #1c387b;
+  --ifm-color-primary-darkest: #172e65;
+  --ifm-color-primary-light: #2d55c4;
+  --ifm-color-primary-lighter: #355fd6;
+  --ifm-color-primary-lightest: #4f74e0;
+
+  --ifm-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --ifm-heading-color: #0f172a;
+  --ifm-font-color-base: #334155;
+
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #f8fafc;
+
+  --ifm-card-background-color: #ffffff;
+  --ifm-menu-color-active: var(--ifm-color-primary);
+
+  --ifm-table-border-color: #e2e8f0;
+  --ifm-table-stripe-background: #f8fafc;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* Force light mode variables regardless of user preference, since we disabled the switch but just in case */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #1e3a8a;
+  --ifm-color-primary-dark: #1e3b82;
+  --ifm-color-primary-darker: #1c387b;
+  --ifm-color-primary-darkest: #172e65;
+  --ifm-color-primary-light: #2d55c4;
+  --ifm-color-primary-lighter: #355fd6;
+  --ifm-color-primary-lightest: #4f74e0;
+
+  --ifm-heading-color: #0f172a;
+  --ifm-font-color-base: #334155;
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #f8fafc;
+}
+
+/* General Layout Tweaks */
+.markdown h1 {
+  font-weight: 700;
+  color: #0f172a;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.markdown h2 {
+  font-weight: 600;
+  color: #1e293b;
+  margin-top: 2rem;
+}
+
+/* Clean Tables for Reports */
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.markdown table th {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border: 1px solid #cbd5e1;
+}
+
+.markdown table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.markdown table tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+/* Polished Cards for Homepage / Validation */
+.custom-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  margin-bottom: 1rem;
+}
+
+.custom-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+/* Mermaid adjustments */
+.docusaurus-mermaid-container {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
