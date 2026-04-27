@@ -2,7 +2,7 @@
 
 SYU - Sahmyook University 디지털 논리 회로 실습 캡스톤디자인
 
-이 저장소의 주요 문서들은 모두 [GitHub Pages](https://syu-capstone.github.io/2fa-doorlock/)를 통해 제공됩니다.
+이 저장소의 주요 문서들은 모두 [GitHub Pages](https://school-project-hwkim-dev.github.io/digital-logic-circuit/)를 통해 제공됩니다.
 상세한 시스템 문서, 문제 해결, 배포 가이드 등은 웹사이트를 참고해주세요.
 
 (기본적인 정보 및 퀵스타트는 동일하게 제공됩니다.)
@@ -21,12 +21,12 @@ NFC/PIN 1차 인증과 YOLOv8 기반 얼굴 인식 2차 인증을 결합한 고�
 > **보안 철학:** 모든 인증 단계는 'Fail-Safe' 원칙을 따릅니다. 인공지능 모델 미로드, 카메라 연결 오류 등 시스템의 불완전한 상태가 감지되면 출입을 즉시 차단하여 잠금 상태를 유지합니다.
 
 ## 주요 문서 링크 (웹 문서)
-* [문서 홈](https://syu-capstone.github.io/2fa-doorlock/docs/intro)
-* [초보자 정복 가이드](https://syu-capstone.github.io/2fa-doorlock/docs/system_docs/EASY_GUIDE)
-* [시스템 설계 상세](https://syu-capstone.github.io/2fa-doorlock/docs/system_docs/system_design)
-* [하드웨어 배선 및 사양](https://syu-capstone.github.io/2fa-doorlock/docs/system_docs/hardware_spec)
-* [보안 취약점 분석](https://syu-capstone.github.io/2fa-doorlock/docs/SECURITY_ANALYSIS)
-* [문제 해결 가이드](https://syu-capstone.github.io/2fa-doorlock/docs/TROUBLESHOOTING)
+* [문서 홈](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/intro)
+* [초보자 정복 가이드](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/system_docs/EASY_GUIDE)
+* [시스템 설계 상세](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/system_docs/system_design)
+* [하드웨어 배선 및 사양](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/system_docs/hardware_spec)
+* [보안 취약점 분석](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/SECURITY_ANALYSIS)
+* [문제 해결 가이드](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/TROUBLESHOOTING)
 
 ## Getting Started (실행 방법)
 
