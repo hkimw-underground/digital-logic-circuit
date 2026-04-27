@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: website/package-lock.json
 
       - name: Install dependencies
-        run: cd website && npm install
+        run: cd website && npm ci
 
       - name: Build website
         run: cd website && npm run build
