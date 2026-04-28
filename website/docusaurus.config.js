@@ -4,8 +4,8 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: '2FA Smart Door Lock System',
-  tagline: 'Technical Report for 2-Factor Authentication Door Lock System',
+  title: '2FA 스마트 도어락 시스템',
+  tagline: '2단계 인증 도어락 시스템 기술 보고서',
   favicon: 'img/favicon.ico',
 
   url: 'https://school-project-hwkim-dev.github.io',
@@ -22,8 +22,8 @@ const config = {
   themes: ['@docusaurus/theme-mermaid'],
 
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en'],
+    defaultLocale: 'ko',
+    locales: ['ko'],
   },
 
   presets: [
@@ -52,15 +52,15 @@ const config = {
         respectPrefersColorScheme: false,
       },
       navbar: {
-        title: '2FA Smart Door Lock',
+        title: '2FA 스마트 도어락',
         items: [
           {
             type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
             position: 'left',
-            label: 'Technical Report',
+            label: '기술 보고서',
           },
-          {to: '/dashboard', label: 'Validation Status', position: 'left'},
+          {to: '/dashboard', label: '검증 상태', position: 'left'},
           {
             href: 'https://github.com/school-project-hwkim-dev/digital-logic-circuit',
             label: 'GitHub',
@@ -72,24 +72,24 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Documentation',
+            title: '문서',
             items: [
               {
-                label: 'Executive Summary',
+                label: '요약 보고서',
                 to: '/docs/executive-summary',
               },
               {
-                label: 'System Architecture',
+                label: '시스템 아키텍처',
                 to: '/docs/architecture',
               },
               {
-                label: 'Validation',
+                label: '검증',
                 to: '/docs/validation/test-plan',
               },
             ],
           },
           {
-            title: 'Repository',
+            title: '저장소',
             items: [
               {
                 label: 'GitHub',
@@ -98,7 +98,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} 2FA Smart Door Lock Project.`,
+        copyright: `Copyright © ${new Date().getFullYear()} 2FA 스마트 도어락 프로젝트.`,
       },
       prism: {
         theme: prismThemes.github,

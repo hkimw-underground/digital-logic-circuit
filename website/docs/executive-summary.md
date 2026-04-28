@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# Executive Summary
+# 요약 보고서
 
 ### Project Purpose
 The purpose of this project is to develop and evaluate an experimental prototype of a Two-Factor Authentication (2FA) Smart Door Lock System. The system addresses the inherent risks of single-factor access control by requiring two distinct forms of identification prior to granting physical access.

@@ -39,7 +39,7 @@ export default function Dashboard() {
   return (
     <Layout title="Validation Dashboard" description="System Validation and Status Dashboard">
       <main className="container margin-vert--lg">
-        <h1>System Validation Status</h1>
+        <h1>시스템 검증 상태</h1>
         <p className="margin-bottom--lg text--secondary">
           This dashboard presents a summary of authentication attempts and system health based on integration testing datasets.
         </p>

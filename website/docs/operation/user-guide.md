@@ -45,7 +45,7 @@ sidebar_position: 2
 ## 대시보드 모니터링 (Dashboard Monitoring)
 
 관리자는 웹 대시보드(Web Dashboard)를 통해 시스템 성능을 모니터링하고 감사 로그(Audit Logs)를 확인할 수 있다.
-- 배포된 Docusaurus 사이트의 **Validation Status** 페이지로 이동한다.
+- 배포된 Docusaurus 사이트의 **검증 상태** 페이지로 이동한다.
 - 대시보드는 총 인증 시도 횟수, 성공/실패 비율, 그리고 정적 검증 데이터 세트를 기반으로 한 실패 원인 분포에 대한 요약을 제공한다.
 
 ## 수동 검증 (모의 모드) (Manual Validation / Mock Mode)
