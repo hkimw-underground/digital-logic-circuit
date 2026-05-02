@@ -1,0 +1,77 @@
+name: Workflow Experiment
+about: Propose a controlled Jules workflow experiment
+title: "[Workflow Experiment] "
+labels: ["workflow-experiment", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template only for controlled workflow experiments.
+
+        Review-Driven remains the default workflow. Autonomous or low-human workflows must stay experimental and must not weaken security, hardware safety, or review requirements.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What workflow experiment are you proposing?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why is this experiment useful for this repository?
+    validations:
+      required: true
+  - type: dropdown
+    id: experiment_type
+    attributes:
+      label: Experiment type
+      options:
+        - Review feedback automation
+        - CI fixer
+        - Scheduled report
+        - Documentation-only workflow
+        - Sandbox branch experiment
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: guardrails
+    attributes:
+      label: Guardrails
+      description: What prevents this experiment from changing hardware, authentication, or security behavior unsafely?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What files or workflow paths are in scope?
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What must not be changed?
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: How will the experiment be checked?
+    validations:
+      required: true
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Required principles
+      options:
+        - label: This experiment will not bypass human maintainer review for production changes.
+          required: true
+        - label: This experiment will not modify hardware or authentication behavior without explicit review.
+          required: true
+        - label: Jules remains an AI coding agent, not a human contributor.
+          required: true
