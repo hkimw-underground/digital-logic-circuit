@@ -1,0 +1,124 @@
+name: Docs and Templates
+
+on:
+  pull_request:
+    paths:
+      - "**/*.md"
+      - ".github/ISSUE_TEMPLATE/**/*.yml"
+      - ".github/ISSUE_TEMPLATE/**/*.yaml"
+      - ".github/workflows/**/*.yml"
+      - ".github/workflows/**/*.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - ".github/ISSUE_TEMPLATE/**/*.yml"
+      - ".github/ISSUE_TEMPLATE/**/*.yaml"
+      - ".github/workflows/**/*.yml"
+      - ".github/workflows/**/*.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  docs-and-templates:
+    name: Validate docs and templates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate YAML syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t yaml_files < <(find .github -type f \( -name "*.yml" -o -name "*.yaml" \) | sort)
+
+          if [ "${#yaml_files[@]}" -eq 0 ]; then
+            echo "No YAML files found."
+            exit 0
+          fi
+
+          ruby -e '
+            require "yaml"
+            ARGV.each do |path|
+              YAML.load_file(path)
+              puts "YAML OK: #{path}"
+            rescue Psych::SyntaxError => e
+              warn "YAML ERROR: #{path}: #{e.message}"
+              exit 1
+            end
+          ' "${yaml_files[@]}"
+
+      - name: Validate Markdown hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t markdown_files < <(find . -type f -name "*.md" -not -path "./.git/*" | sort)
+
+          if [ "${#markdown_files[@]}" -eq 0 ]; then
+            echo "No Markdown files found."
+            exit 0
+          fi
+
+          python3 - <<'PY' "${markdown_files[@]}"
+          import pathlib
+          import sys
+
+          failed = False
+
+          for raw_path in sys.argv[1:]:
+              path = pathlib.Path(raw_path)
+              text = path.read_text(encoding="utf-8")
+              lines = text.splitlines()
+
+              if text and not text.endswith("\n"):
+                  print(f"Markdown ERROR: {path}: file must end with a newline")
+                  failed = True
+
+              for index, line in enumerate(lines, start=1):
+                  if "\t" in line:
+                      print(f"Markdown ERROR: {path}:{index}: tab character")
+                      failed = True
+
+                  stripped = line.rstrip(" ")
+                  trailing_spaces = len(line) - len(stripped)
+
+                  # Allow exactly two trailing spaces for Markdown hard line breaks.
+                  if trailing_spaces not in (0, 2):
+                      print(
+                          f"Markdown ERROR: {path}:{index}: "
+                          f"unexpected trailing spaces ({trailing_spaces})"
+                      )
+                      failed = True
+
+              print(f"Markdown OK: {path}")
+
+          if failed:
+              sys.exit(1)
+          PY
+
+      - name: Validate workflow starter files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_paths=(
+            "README.md"
+            "AGENTS.md"
+            ".github/PULL_REQUEST_TEMPLATE.md"
+            ".github/ISSUE_TEMPLATE/jules_task.yml"
+            ".github/ISSUE_TEMPLATE/workflow_experiment.yml"
+            "docs/jules-workflow.md"
+          )
+
+          for path in "${required_paths[@]}"; do
+            if [ ! -f "$path" ]; then
+              echo "Missing required workflow file: $path"
+              exit 1
+            fi
+            echo "Found: $path"
+          done

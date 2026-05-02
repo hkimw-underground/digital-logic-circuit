@@ -1,0 +1,82 @@
+name: Jules Task
+about: Create a scoped task for Jules-assisted work
+title: "[Jules Task] "
+labels: ["jules", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for scoped Jules-assisted work.
+
+        Jules is an AI coding agent. The human maintainer remains responsible for hardware judgment, architecture, security, validation, review, and merge decisions.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should this task accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include project context, affected subsystem, and relevant files.
+      placeholder: "Example: NFC/PIN authentication flow, face recognition fallback, docs update, CI setup."
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is Jules allowed to change?
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What must not be changed?
+      placeholder: "Example: Do not change unlock behavior. Do not modify hardware wiring assumptions."
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk areas
+      description: List any security, hardware, authentication, or fail-safe concerns.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What must be true before this task is complete?
+      placeholder: "- [ ] ..."
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: What tests, checks, or manual validation are expected?
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output Required
+      description: What should the PR include?
+      placeholder: "Focused PR, validation notes, assumptions, and maintainer review points."
+    validations:
+      required: true
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Workflow principles
+      options:
+        - label: This task should produce a focused PR linked to this issue.
+          required: true
+        - label: Jules must remain described as an AI coding agent, not a human contributor.
+          required: true
+        - label: Human maintainer review is required before merge.
+          required: true
