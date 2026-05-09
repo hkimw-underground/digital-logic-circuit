@@ -20,16 +20,14 @@ NFC/PIN 1차 인증과 YOLOv8 기반 얼굴 인식 2차 인증을 결합한 고�
 
 > **보안 철학:** 모든 인증 단계는 'Fail-Safe' 원칙을 따릅니다. 인공지능 모델 미로드, 카메라 연결 오류 등 시스템의 불완전한 상태가 감지되면 출입을 즉시 차단하여 잠금 상태를 유지합니다.
 
-## 주요 문서 링크 (웹 문서)
+## 개발 및 문서 관리
 * [문서 홈](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/intro)
 * [초보자 정복 가이드](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/system_docs/EASY_GUIDE)
 * [시스템 설계 상세](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/system_docs/system_design)
 * [하드웨어 배선 및 사양](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/system_docs/hardware_spec)
 * [보안 취약점 분석](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/SECURITY_ANALYSIS)
 * [문제 해결 가이드](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/TROUBLESHOOTING)
-
-## AI Workflow (Jules)
-이 프로젝트는 AI 코딩 에이전트 Jules를 활용하여 개발됩니다. 모든 AI 지원 작업은 [Jules Workflow](docs/jules-workflow.md)에 따라 수행되며, 관리자의 검토 및 승인 후 메인 브랜치에 반영됩니다.
+* [AI 협업 가이드 (Jules)](docs/jules-workflow.md)
 
 ## Getting Started (실행 방법)
 
