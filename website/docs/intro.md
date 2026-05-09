@@ -2,36 +2,36 @@
 sidebar_position: 1
 ---
 
-# Introduction
+# 서론 (Introduction)
 
-## 2FA Smart Door Lock System
+## 2FA 스마트 도어락 시스템 개요
 
-This document serves as the technical report for the experimental **2-Factor Authentication (2FA) Smart Door Lock System**. It provides a comprehensive overview of the system's architecture, hardware implementation, software design, security threat model, and validation results.
+본 문서는 삼육대학교 디지털 논리 회로 캡스톤 디자인 프로젝트의 일환으로 수행된 **이중 인증(2-Factor Authentication, 2FA) 스마트 도어락 시스템** 실험 모델에 대한 기술 보고서이다. 본 보고서는 시스템 아키텍처, 하드웨어 구현, 소프트웨어 설계, 보안 위협 모델링 및 검증 결과를 상세히 다룬다.
 
-### Problem Statement
+### 문제 정의 (Problem Statement)
 
-Traditional single-factor authentication door lock systems, such as those relying exclusively on NFC cards or PIN codes, are vulnerable to physical theft, unauthorized sharing, and brute-force attacks. If an unauthorized individual obtains a registered NFC card, they gain unrestricted access.
+기존의 단일 인증(Single-Factor Authentication) 방식 도어락은 NFC 카드나 PIN 번호 중 하나에만 의존하므로 물리적 도난, 비인가 공유, 무차별 대입 공격(Brute-force attack)에 취약하다. 만약 인가되지 않은 개인이 등록된 NFC 카드를 획득하거나 비밀번호를 알아낼 경우, 시스템은 이를 정당한 사용자로 오인하여 즉시 출입을 허용하게 된다. 이러한 보안 결점은 높은 수준의 보안이 요구되는 환경에서 심각한 위협이 된다.
 
-### Objective and Scope
+### 목적 및 범위 (Objective and Scope)
 
-The primary objective of this project is to implement an experimental prototype of a 2FA smart door lock system that mitigates the vulnerabilities of single-factor authentication. The system combines:
+본 프로젝트의 주된 목적은 단일 인증 방식의 취약점을 보완하는 실무형 2FA 스마트 도어락 프로토타입을 구현하는 것이다. 시스템은 다음과 같은 다층 방어 체계를 결합한다.
 
-1. **Primary Authentication**: "Something you have" or "Something you know" (NFC card or PIN code).
-2. **Secondary Authentication**: "Something you are" (Facial verification via vision AI).
+1. **1차 인증 (Primary Authentication)**: '소유(Something you have)' 또는 '지식(Something you know)' 기반 인증 (NFC 카드 또는 PIN 번호).
+2. **2차 인증 (Secondary Authentication)**: '존재(Something you are)' 기반 인증 (Vision AI를 통한 얼굴 검증).
 
-**Scope of Implementation:**
-- A hardware prototype utilizing an Arduino to manage a 125kHz/13.56MHz RFID/NFC reader, a matrix keypad, and a relay module.
-- A centralized backend API for multi-stage authentication, event logging, and serial communication.
-- A computer-vision module for facial verification.
-- A monitoring dashboard to summarize validation attempts and system health.
+**구현 범위:**
+- **하드웨어 프로토타입**: Arduino를 활용하여 RFID/NFC 리더, 매트릭스 키패드 및 릴레이(Relay) 모듈을 제어한다.
+- **중앙 집중형 Backend API**: 다단계 인증 로직, 이벤트 로깅 및 Serial 통신을 관리하는 FastAPI 기반 서버를 구축한다.
+- **Vision AI 모듈**: YOLOv8 및 OpenCV를 활용한 얼굴 인식 및 검증 기능을 구현한다.
+- **모니터링 대시보드**: 인증 시도 이력 및 시스템 상태를 시각화하여 제공한다.
 
-**Out of Scope:**
-- This prototype is **not** a certified commercial access-control product.
-- Advanced commercial-grade anti-spoofing (e.g., depth-sensing 3D cameras).
-- Physical enclosure design resistant to heavy physical tampering.
+**제외 범위:**
+- 본 프로토타입은 상용 수준의 인증을 받은 보안 제품이 아니며, 실험적 목적을 가진다.
+- 깊이 감지(Depth-sensing) 카메라를 이용한 고도의 Anti-spoofing 기술은 범위에서 제외한다.
+- 물리적 파손이나 충격에 견디는 하드웨어 인클로저(Enclosure) 설계는 다루지 않는다.
 
-### Key Results
+### 핵심 결과 (Key Results)
 
-- **Two-Stage Verification:** Successfully implemented a sequential authentication pipeline where unlocking the relay requires both valid primary credentials and a subsequent positive facial match.
-- **Relay Control:** Established controlled serial communication to command the Arduino relay only upon successful backend validation.
-- **Auditing:** Developed a robust logging mechanism recording all successful and failed access attempts.
+- **2단계 검증 프로세스**: 유효한 1차 인증(NFC/PIN)과 이후 이어지는 2차 얼굴 인식 결과가 모두 일치해야만 릴레이를 제어하는 순차적 인증 파이프라인을 성공적으로 구축하였다.
+- **중앙 제어형 릴레이 제어**: Backend 서버의 최종 승인 결과에 따라 Serial 통신을 통해 Arduino 릴레이가 작동하도록 설계하여, 하드웨어 독립적인 결정 구조를 지양하였다.
+- **감사 및 추적성**: 모든 성공 및 실패한 출입 시도를 데이터베이스에 기록함으로써 시스템의 투명성과 보안 감사 기능을 확보하였다.
