@@ -1,18 +1,18 @@
 # AGENTS.md
 
-This repository is a real hardware/software capstone project using a Jules-assisted GitHub workflow.
+This repository is a school capstone project for a 2FA smart door lock system.
 
-Jules is an AI coding agent. Jules is not a human contributor. The human maintainer owns hardware judgment, architecture, security decisions, validation, review, and merge decisions.
+Use Jules as an AI coding agent to help with documentation, report cleanup, translation, diagrams, website docs, and small implementation tasks when the issue asks for them. Jules is not a human contributor, and the maintainer still decides what to merge.
 
 ## Default workflow
 
-Use the Review-Driven workflow by default:
+Use this simple workflow:
 
 ```text
-Issue → Jules task → Pull request → CI → Human review → Merge
+Issue → Jules task → Pull request → Review → Merge
 ```
 
-Every Jules-assisted change should start from a GitHub Issue and end in a human-reviewed pull request.
+For this repository, documentation and report-polish work can be handled more freely than production software work. The goal is to improve the project presentation and leave a useful GitHub history.
 
 ## Repository context
 
@@ -22,59 +22,42 @@ This project is a smart door lock system built around:
 - NFC/PIN first-factor authentication
 - YOLO-based face recognition as a second factor
 - Raspberry Pi and hardware integration
-- security-sensitive fail-safe behavior
-
-The system should remain fail-safe. If hardware, camera, model loading, identity checks, or authentication state is uncertain, the safe behavior is to keep access blocked.
+- a Docusaurus report website
 
 ## Rules for Jules
 
 - Treat the linked GitHub Issue as the source of truth.
-- Keep pull requests small and focused.
-- Do not change hardware behavior unless the issue explicitly asks for it.
-- Do not modify authentication logic unless the issue explicitly asks for it.
-- Do not weaken fail-safe behavior.
-- Do not add secrets, private credentials, keys, tokens, or local machine paths.
-- Do not perform opportunistic refactors.
-- Do not rewrite large documents unless the issue explicitly asks for it.
-- Include validation notes in every PR.
-- Call out assumptions and areas that require human inspection.
+- Prefer clear, natural school-report writing over AI-sounding wording.
+- Documentation, translation, README, website docs, and report cleanup may be edited boldly when the issue asks for it.
+- Keep public-facing writing practical and human-written.
+- Avoid hype, emojis, exaggerated claims, and “AI did everything” language.
+- Keep PRs reviewable, but do not be overly timid on documentation improvements.
+- Include a short validation note in every PR.
+- Do not add secrets, credentials, tokens, private paths, or generated bulky artifacts.
 - Do not self-merge.
 
-## High-risk areas
+## Code and hardware changes
 
-Changes in these areas require careful human review:
+Code and hardware changes are allowed when an issue explicitly asks for them, but the PR should explain what changed and how it was checked.
+
+Use extra care for:
 
 - lock or unlock behavior
 - NFC authentication
 - PIN authentication
 - face recognition and model loading
-- camera availability and failure handling
-- database access and identity records
+- camera failure handling
+- database records
 - GPIO, relay, servo, or physical hardware control
-- security analysis and threat assumptions
-- deployment instructions that affect real hardware
+
+For documentation-only changes, do not over-emphasize safety boundaries. Keep the writing focused on the school project, system design, usage, validation, and report quality.
 
 ## Validation expectations
 
-A Jules-assisted PR should explain:
+For documentation-only changes, check Markdown readability, links, and Docusaurus build when relevant.
 
-```text
-What issue does this solve?
-What changed?
-What did not change?
-How was it validated?
-What assumptions were made?
-What should the human maintainer inspect carefully?
-```
+For code changes, include tests, command output, manual checks, or a note explaining what requires the physical setup.
 
-For documentation-only changes, validate Markdown readability and links.
+## Case Study note
 
-For code changes, include the relevant command output, tests, manual checks, or reason why local hardware validation is required.
-
-For hardware-sensitive changes, state what cannot be verified without the physical setup.
-
-## Case Study A note
-
-This repository is intended to serve as Case Study A for `hkimw-underground/vibe-coding-with-jules`.
-
-The goal is to leave a readable GitHub history of issues, Jules-assisted pull requests, CI checks, human review, and validation decisions.
+This repository can be used as a practical example of Jules-assisted development, but the repository itself should continue to read primarily as a school capstone project.
