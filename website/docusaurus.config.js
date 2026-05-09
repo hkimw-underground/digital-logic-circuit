@@ -5,7 +5,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: '2FA 스마트 도어락 시스템',
-  tagline: '2단계 인증 도어락 시스템 기술 보고서',
+  tagline: '지능형 이중 인증을 활용한 스마트 도어락 시스템 구현 보고서',
   favicon: 'img/favicon.ico',
 
   url: 'https://school-project-hwkim-dev.github.io',
