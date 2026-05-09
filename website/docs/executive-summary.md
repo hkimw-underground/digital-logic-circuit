@@ -2,34 +2,32 @@
 sidebar_position: 2
 ---
 
-# 요약 보고서
+# 요약 보고서 (Executive Summary)
 
-### Project Purpose
-The purpose of this project is to develop and evaluate an experimental prototype of a Two-Factor Authentication (2FA) Smart Door Lock System. The system addresses the inherent risks of single-factor access control by requiring two distinct forms of identification prior to granting physical access.
+본 보고서는 NFC/PIN 기반의 1차 인증과 YOLOv8 얼굴 인식 기반의 2차 인증을 결합한 **이중 인증(2FA) 스마트 도어락 시스템**의 설계, 구현 및 검증 결과를 요약한다.
 
-### System Configuration
-The system integrates a micro-controller (Arduino Uno/Nano) with a centralized Python backend.
-- **Hardware Controller**: The Arduino manages localized inputs (MFRC522 NFC reader, 4x4 matrix keypad) and controls the unlocking mechanism via a relay module.
-- **Backend Infrastructure**: A FastAPI-based server orchestrates the authentication logic, interfaces with an SQLite database for credential storage and event logging, and utilizes YOLOv8/OpenCV for the secondary facial verification stage.
+### 1. 문제 정의 (Problem)
+기존의 단일 인증(Single-Factor) 방식은 카드 분실, 비밀번호 노출, 또는 어깨 너머 훔쳐보기(Shoulder Surfing)와 같은 위협에 취약하다. 본 프로젝트는 '소유(NFC)', '지식(PIN)', '존재(얼굴)'라는 세 가지 보안 요소를 결합하여 물리적 보안을 강화하는 것을 목표로 한다.
 
-### Validation Results
-Basic functional testing confirms the operational sequence:
-1. The backend accurately validates NFC UIDs and PIN inputs.
-2. Upon primary success, the vision module evaluates the user's face.
-3. The relay is energized to unlock the door only when both stages pass.
-4. Access failures at any stage immediately terminate the sequence and are logged to the database.
+### 2. 시스템 아키텍처 (Architecture)
+시스템은 하드웨어 제어부, 백엔드 서버, 비전 모듈의 세 계층으로 구성된다.
+- **하드웨어 제어부**: Arduino가 NFC 리더와 키패드 입력을 수집하고, 서버의 명령에 따라 릴레이를 제어한다.
+- **백엔드 서버**: FastAPI 기반으로 인증 로직을 오케스트레이션하며, SQLite를 사용하여 사용자 정보와 출입 로그를 관리한다.
+- **비전 모듈**: YOLOv8과 OpenCV를 활용하여 실시간 얼굴 감지 및 비교를 수행한다.
 
-*See the Validation section for detailed statistics and test plans.*
+### 3. 핵심 구현 (Implementation)
+- **순차적 인증 파이프라인**: 1차 인증(NFC/PIN) 성공 시에만 2차 인증(Vision AI)을 활성화하여 시스템 자원 소모를 최적화한다.
+- **실시간 로그 시스템**: 모든 인증 시도의 성공 여부와 실패 사유를 데이터베이스에 기록하여 감사 추적(Audit Trail)을 제공한다.
+- **시리얼 통신 제어**: 서버와 마이크로컨트롤러 간의 엄격한 명령 체계를 구축하여 승인된 경우에만 물리적 잠금을 해제한다.
 
-### Key Risks and Limitations
-While the system successfully demonstrates a 2FA workflow, several limitations exist within the current prototype:
-- **Hardware Isolation**: The relay-controlled lock requires a separate, isolated power source. Direct integration with high-voltage or critical infrastructure was not performed.
-- **Physical Bypass**: The system is vulnerable to physical relay bypass attacks. Software enforcement cannot prevent direct physical tampering with the relay wiring.
-- **Spoofing Vulnerability**: The facial recognition module, relying on standard RGB camera input, remains susceptible to high-quality 2D spoofing (e.g., printed photographs or high-resolution digital displays).
-- **Serial Communication**: Command transmission between the backend server and the Arduino currently utilizes unencrypted serial communication.
+### 4. 보안 설계 (Security)
+- **Fail-Safe 원칙**: 시스템 오류, 하드웨어 연결 끊김, 또는 비정상적인 종료 발생 시 도어락은 항상 잠금 상태를 유지한다.
+- **데이터 보호**: 사용자 PIN은 해시화되어 저장되며, 민감한 정보는 데이터베이스 내에서 보호된다.
 
-### Future Improvements
-Future iterations should address the identified limitations by:
-1. Implementing encrypted serial communication protocols.
-2. Upgrading to a depth-sensing camera (e.g., IR or stereo vision) for robust anti-spoofing.
-3. Enclosing hardware components in a tamper-resistant housing.
+### 5. 검증 결과 (Validation)
+- **기능 테스트**: 다양한 인증 시나리오(성공, 1차 실패, 2차 실패, 타임아웃)에 대해 의도한 대로 동작함을 확인하였다.
+- **안정성 테스트**: 하드웨어 연결 해제 및 재연결 시 시스템이 자동으로 복구되는 탄력성을 입증하였다.
+
+### 6. 한계점 및 향후 발전 방향 (Limitations & Future Work)
+- **한계점**: 현재 프로토타입은 2D RGB 카메라를 사용하므로 사진이나 비디오를 이용한 스푸핑(Spoofing) 공격에 취약할 수 있으며, 시리얼 통신이 평문으로 이루어진다.
+- **발전 방향**: 향후 적외선(IR) 또는 스테레오 카메라를 도입하여 생체 감지(Liveness Detection) 기능을 강화하고, 시리얼 통신 암호화를 통해 통신 보안을 개선할 계획이다.
