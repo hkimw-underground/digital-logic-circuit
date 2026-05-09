@@ -2,38 +2,40 @@
 sidebar_position: 3
 ---
 
-# Problem and Objective
+# 문제 정의 및 개발 목표
 
-## The Vulnerabilities of Single-Factor Authentication
+## 1. 기존 단일 인증 방식의 보안 취약점
 
-Conventional physical access control systems heavily rely on single-factor authentication methodologies:
-- **RFID/NFC Cards**: Susceptible to loss, theft, or unauthorized duplication.
-- **PIN Codes**: Vulnerable to observation (shoulder surfing), sharing, and brute-force attacks.
+전통적인 물리 보안 시스템에서 널리 사용되는 단일 인증(Single-Factor Authentication) 방식은 다음과 같은 근본적인 보안 취약점을 지닌다.
 
-When a single point of failure is compromised, an unauthorized entity gains complete access to the secured area. For high-security environments, this risk profile is unacceptable.
+- **NFC/RFID 카드**: 물리적인 분실이나 도난에 취약하며, 권한이 없는 제3자가 복제하거나 습득할 경우 즉각적인 무단 출입이 가능하다.
+- **PIN 코드**: 숄더 서핑(Shoulder Surfing)과 같은 관찰 공격, 사용자 간의 비밀번호 공유, 브루트 포스(Brute-force) 공격을 통한 번호 유추 등에 노출되어 있다.
 
-## Objectives of the 2FA System
+이러한 방식은 인증 수단이 곧 출입 권한과 동일시되므로, 단 한 번의 보안 파괴(Single Point of Failure)가 전체 시스템의 붕괴로 이어진다. 높은 수준의 보안이 요구되는 환경에서는 이러한 리스크 관리가 필수적이다.
 
-This project aims to build an experimental prototype that mitigates these risks by implementing a strict Two-Factor Authentication (2FA) pipeline.
+## 2. 2FA 시스템 개발 목표
 
-### 1. Mandatory Dual Verification
-The system enforces that possessing a valid credential (NFC/PIN) is insufficient for access. It must be paired with immediate, localized biometric verification (Facial Recognition).
+본 프로젝트의 목표는 기존 단일 인증 방식의 한계를 극복하기 위해 이중 인증(Two-Factor Authentication, 2FA) 파이프라인을 구현하고, 이를 실험적 프로토타입으로 검증하는 것이다.
 
-### 2. Centralized Auditing
-Every access attempt, whether successful or rejected, must be logged with a precise timestamp and failure reason. This provides a clear audit trail for security monitoring.
+### 2.1 의무적 이중 검증 (Mandatory Dual Verification)
+단순히 유효한 인증 수단(NFC/PIN)을 소유하는 것만으로는 출입을 허용하지 않는다. 반드시 소유/지식 기반 인증 이후, 즉각적이고 국소적인 생체 인식(Facial Recognition) 단계를 거치도록 강제한다.
 
-### 3. Fail-Secure Design
-The default state of the system is locked. The unlock command is exclusively transmitted to the relay controller only if all authentication stages pass explicitly. Any timeout, software exception, or hardware disconnect results in the door remaining locked.
+### 2.2 중앙 집중형 감사 (Centralized Auditing)
+모든 출입 시도는 성공 여부와 상관없이 정확한 타임스탬프 및 실패 사유와 함께 로그로 기록된다. 이를 통해 보안 모니터링을 위한 명확한 감사 추적(Audit Trail)을 제공한다.
 
-## Project Boundaries
+### 2.3 페일 세이프 및 잠금 설계 (Fail-Secure Design)
+시스템의 기본 상태는 항상 '잠금'을 유지한다. 모든 인증 단계가 명시적으로 통과된 경우에만 릴레이 컨트롤러에 개방 명령을 전송한다. 타임아웃, 소프트웨어 예외 발생, 하드웨어 연결 단절 등의 비정상 상황에서는 출입을 차단하는 것을 원칙으로 한다.
 
-To accurately assess the system, it is crucial to understand the boundaries of this experimental prototype:
+## 3. 프로젝트의 범위 및 한계
 
-**What the system solves:**
-- Prevents access using stolen NFC cards or leaked PINs if the unauthorized user's face is not registered.
-- Provides a software-enforced logging mechanism for physical access attempts.
+시스템의 유효성을 정확히 평가하기 위해 본 실험적 프로토타입의 경계를 다음과 같이 정의한다.
 
-**What the system does NOT solve (Current Limitations):**
-- **Physical Destruction**: It does not defend against physical destruction of the door or the lock mechanism itself.
-- **Advanced Spoofing**: The prototype's vision AI uses 2D cameras and does not incorporate commercial-grade liveness detection.
-- **Hardware Tampering**: If an attacker gains physical access to the relay wiring, they can bypass the Arduino logic by manually closing the circuit.
+### 해결 가능한 범위
+- 도난된 NFC 카드나 유출된 PIN을 입수하더라도, 등록되지 않은 사용자의 출입을 Vision AI를 통해 차단한다.
+- 물리적 출입 시도에 대한 소프트웨어 강제 로그 기록 메커니즘을 제공한다.
+
+### 해결 불가능한 범위 (현재 한계점)
+- **물리적 파손**: 도어 본체나 잠금 장치 자체에 가해지는 직접적인 물리적 파괴 공격은 방어하지 않는다.
+- **고도화된 스푸핑(Spoofing)**: 본 프로토타입은 2D 카메라 기반 Vision AI를 사용하므로, 고해상도 사진이나 디스플레이를 이용한 전문적인 생체 인식 우회 공격(Liveness Detection 부재)에 취약할 수 있다.
+- **하드웨어 변조**: 공격자가 릴레이 배선에 직접 접근하여 강제로 회로를 구성하는 하드웨어 해킹은 소프트웨어적으로 제어할 수 없다.
+- **통신 보안**: 백엔드와 Arduino 간의 직렬 통신은 현재 암호화되지 않은 상태로 전송된다.
