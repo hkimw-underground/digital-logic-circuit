@@ -2,24 +2,20 @@
 sidebar_position: 2
 ---
 
-# AI 지원 워크플로우 (AI-Assisted Workflow)
+# 부록: AI 활용 워크플로우
 
-이 실험적 프로토타입의 개발 수명 주기(Development Lifecycle) 동안 대규모 언어 모델(LLM / Large Language Models)이 엔지니어링 보조 도구로 활용되었다. 이 문서는 AI 도구가 표준 개발 워크플로우에 어떻게 통합되었는지 간략히 설명한다.
+본 프로젝트의 개발 과정에서는 LLM(Large Language Models)을 엔지니어링 보조 도구로 활용하여 효율성을 높였다. AI 도구를 표준 개발 프로세스에 통합한 방식과 주요 적용 분야를 다음과 같이 정리한다.
 
-## AI 지원의 적용 (Applications of AI Assistance)
+## 1. AI 지원의 주요 적용 분야
 
-1. **빠른 프로토타이핑 / 보일러플레이트 생성 (Rapid Prototyping / Boilerplate Generation):**
-   FastAPI 웹 서버 라우팅 및 React/Docusaurus 프론트엔드 구성을 위한 표준 보일러플레이트(Boilerplate) 코드를 생성하는 데 AI 모델이 사용되었다. 이를 통해 초기 설정 속도를 높였다.
+*   **프로토타이핑 및 보일러플레이트 생성:** FastAPI 서버 라우팅과 React/Docusaurus 프론트엔드 초기 설정을 위한 보일러플레이트 코드를 생성하여 초기 구축 시간을 단축했다.
+*   **하드웨어 인터페이스 구현 보조:** MFRC522 SPI 통신 및 Keypad 스캐닝 로직의 참조 코드를 바탕으로, 실제 하드웨어의 Pinout 설정에 맞춰 최적화 및 디버깅을 진행했다.
+*   **문서화 및 구조화:** 개발 과정에서 작성된 엔지니어링 노트를 구조화된 Markdown 문서로 변환하고, 시스템 아키텍처 설명을 기반으로 다이어그램 초안을 생성하는 데 활용했다.
 
-2. **하드웨어 인터페이스 지침 (Hardware Interfacing Guidance):**
-   LLM은 C++ MFRC522 SPI 라이브러리 및 Keypad 매트릭스 스캐닝을 위한 참조 구현(Reference Implementation)을 제공했으며, 이후 프로토타입의 특정 핀 아웃(Pinout)에 맞게 다듬어지고 적용되었다.
+## 2. 워크플로우 통합 및 검증 가이드라인
 
-3. **문서 구조화 (Documentation Structuring):**
-   원시 엔지니어링 노트(Raw engineering notes)를 구조화된 마크다운 문서로 포맷팅하고, 아키텍처에 대한 자연어 설명을 기반으로 다이어그램 구문을 생성하는 데 AI 도구가 지원되었다.
+AI 생성 결과물의 신뢰성과 보안성을 확보하기 위해 다음 원칙을 준수했다.
 
-## 워크플로우 통합 가이드라인 (Workflow Integration Guidelines)
-
-코드 품질과 보안을 유지하기 위해 다음 가이드라인을 엄격하게 준수했다.
-- **제로 트러스트 검토 (Zero-Trust Review):** AI가 생성한 모든 코드는 수동 코드 리뷰(Manual code review) 및 로컬 단위 테스트(Local unit testing)를 거쳤다.
-- **아키텍처 권한 (Architectural Authority):** 핵심 아키텍처 결정(예: 동기식 vs 비동기식 처리, 데이터베이스 스키마 설계)은 인간 엔지니어가 내렸으며, AI는 오직 구현 실행을 위해서만 엄격하게 사용되었다.
-- **보안 원시 요소 (Security Primitives):** 암호화 작업(예: `bcrypt`를 통한 PIN 해싱)은 AI의 제안에만 의존하지 않고 업계 모범 사례를 기반으로 수동으로 검증되었다.
+*   **철저한 수동 검토 및 테스트:** AI가 제안한 모든 코드는 개발자의 수동 코드 리뷰와 로컬 단위 테스트를 거친 후 통합했다.
+*   **설계 주도권 유지:** 동기/비동기 처리 방식이나 데이터베이스 스키마 설계 등 핵심적인 아키텍처 결정은 인간 개발자가 직접 수행했으며, AI는 세부 구현 단계에서 보조적으로만 사용했다.
+*   **보안 요소 직접 검증:** bcrypt를 활용한 PIN 해싱 등 보안이 중요한 핵심 로직은 AI의 제안에 의존하지 않고 표준 보안 가이드라인을 준수하여 직접 구현 및 검증했다.
