@@ -2,13 +2,13 @@
 sidebar_position: 4
 ---
 
-# System Architecture
+# 시스템 아키텍처 (System Architecture)
 
-The 2FA Smart Door Lock System is composed of several interdependent modules spanning hardware, backend logic, data persistence, and computer vision.
+본 2FA 스마트 도어락 시스템은 하드웨어 제어, 백엔드 로직, 데이터 저장소 및 Vision AI 모듈이 유기적으로 결합된 구조로 설계되었다.
 
-## Architecture Overview
+## 아키텍처 개요 (Architecture Overview)
 
-*Note: For a detailed SVG visualization, please refer to the customized architecture diagram below.*
+전체 시스템은 크게 사용자 인터페이스를 담당하는 하드웨어 레이어, 인증 로직을 처리하는 백엔드 서버 레이어, 그리고 상태를 모니터링하는 웹 대시보드로 구성된다.
 
 <div style={{ textAlign: 'center', margin: '2rem 0' }}>
   <svg width="800" height="400" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" style={{ border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
@@ -18,40 +18,40 @@ The 2FA Smart Door Lock System is composed of several interdependent modules spa
       </marker>
     </defs>
 
-    {/* Client Layer */}
+    {/* 하드웨어 레이어 */}
     <rect x="50" y="50" width="150" height="80" rx="8" fill="#ffffff" stroke="#1e3a8a" strokeWidth="2" />
-    <text x="125" y="85" textAnchor="middle" fill="#0f172a" fontWeight="bold">Hardware Inputs</text>
+    <text x="125" y="85" textAnchor="middle" fill="#0f172a" fontWeight="bold">하드웨어 입력</text>
     <text x="125" y="105" textAnchor="middle" fill="#334155" fontSize="12">NFC Reader &amp; Keypad</text>
 
     {/* Arduino */}
     <rect x="50" y="180" width="150" height="80" rx="8" fill="#ffffff" stroke="#1e3a8a" strokeWidth="2" />
-    <text x="125" y="215" textAnchor="middle" fill="#0f172a" fontWeight="bold">Microcontroller</text>
+    <text x="125" y="215" textAnchor="middle" fill="#0f172a" fontWeight="bold">마이크로컨트롤러</text>
     <text x="125" y="235" textAnchor="middle" fill="#334155" fontSize="12">Arduino (Serial)</text>
 
     {/* Lock */}
     <rect x="50" y="300" width="150" height="50" rx="8" fill="#ffffff" stroke="#e11d48" strokeWidth="2" />
-    <text x="125" y="330" textAnchor="middle" fill="#0f172a" fontWeight="bold">Relay / Door Lock</text>
+    <text x="125" y="330" textAnchor="middle" fill="#0f172a" fontWeight="bold">릴레이 / 도어락</text>
 
-    {/* Backend Layer */}
+    {/* 백엔드 레이어 */}
     <rect x="325" y="180" width="150" height="80" rx="8" fill="#ffffff" stroke="#1e3a8a" strokeWidth="2" />
-    <text x="400" y="215" textAnchor="middle" fill="#0f172a" fontWeight="bold">Backend Server</text>
+    <text x="400" y="215" textAnchor="middle" fill="#0f172a" fontWeight="bold">백엔드 서버</text>
     <text x="400" y="235" textAnchor="middle" fill="#334155" fontSize="12">Python FastAPI</text>
 
-    {/* Vision Layer */}
+    {/* Vision 레이어 */}
     <rect x="600" y="50" width="150" height="80" rx="8" fill="#ffffff" stroke="#1e3a8a" strokeWidth="2" />
-    <text x="675" y="85" textAnchor="middle" fill="#0f172a" fontWeight="bold">Vision Module</text>
+    <text x="675" y="85" textAnchor="middle" fill="#0f172a" fontWeight="bold">Vision 모듈</text>
     <text x="675" y="105" textAnchor="middle" fill="#334155" fontSize="12">YOLOv8 / OpenCV</text>
 
-    {/* DB Layer */}
+    {/* DB 레이어 */}
     <rect x="600" y="180" width="150" height="80" rx="8" fill="#ffffff" stroke="#1e3a8a" strokeWidth="2" />
-    <text x="675" y="215" textAnchor="middle" fill="#0f172a" fontWeight="bold">Database</text>
+    <text x="675" y="215" textAnchor="middle" fill="#0f172a" fontWeight="bold">데이터베이스</text>
     <text x="675" y="235" textAnchor="middle" fill="#334155" fontSize="12">SQLite</text>
 
-    {/* Web Dashboard */}
+    {/* 웹 대시보드 */}
     <rect x="600" y="300" width="150" height="50" rx="8" fill="#ffffff" stroke="#059669" strokeWidth="2" />
-    <text x="675" y="330" textAnchor="middle" fill="#0f172a" fontWeight="bold">Web Dashboard</text>
+    <text x="675" y="330" textAnchor="middle" fill="#0f172a" fontWeight="bold">웹 대시보드</text>
 
-    {/* Connections */}
+    {/* 연결선 */}
     <path d="M 125 130 L 125 180" stroke="#1e3a8a" strokeWidth="2" fill="none" markerEnd="url(#arrow)" />
     <path d="M 125 260 L 125 300" stroke="#1e3a8a" strokeWidth="2" fill="none" markerEnd="url(#arrow)" />
     <path d="M 200 220 L 325 220" stroke="#1e3a8a" strokeWidth="2" fill="none" markerEnd="url(#arrow)" />
@@ -64,29 +64,29 @@ The 2FA Smart Door Lock System is composed of several interdependent modules spa
   </svg>
 </div>
 
-## Component Responsibilities
+## 구성 요소별 역할 (Component Responsibilities)
 
-| Module | Responsibility | Technology |
+| 모듈 | 역할 및 책임 | 주요 기술 |
 |---|---|---|
-| **Microcontroller** | Polls NFC and Keypad hardware, transmits raw inputs over Serial, and toggles the relay based strictly on server commands. | Arduino Uno/Nano, C++ |
-| **Backend API** | Orchestrates authentication logic. Verifies primary credentials, invokes the vision module, sends serial commands, and handles event persistence. | Python, FastAPI, PySerial |
-| **Vision Module** | Captures camera frames, detects faces, and compares the detected face against registered profiles for secondary authentication. | OpenCV, YOLOv8 |
-| **Database** | Securely stores user credentials (hashed PINs, NFC UIDs) and immutable access logs. | SQLite |
-| **Web Frontend** | Displays a validation summary and system health metrics for monitoring purposes. | React, Docusaurus |
+| **마이크로컨트롤러** | NFC 및 키패드 하드웨어 상태를 폴링(Polling)하고, 원시 입력을 Serial 통신으로 백엔드에 전달한다. 서버의 명령에 따라 릴레이를 제어한다. | Arduino Uno/Nano, C++ |
+| **백엔드 API** | 전체 인증 흐름을 제어한다. 1차 인증(NFC/PIN) 확인 후 Vision 모듈을 호출하며, 최종 승인 시 Arduino에 잠금 해제 명령을 전송한다. | Python, FastAPI, PySerial |
+| **Vision 모듈** | 카메라로부터 프레임을 캡처하여 얼굴을 탐지하고, 등록된 사용자 프로필과 비교하여 2차 인증을 수행한다. YOLOv8 모델을 사용하여 실시간 추론을 수행한다. | OpenCV, YOLOv8 |
+| **데이터베이스** | 사용자 자격 증명(해싱된 PIN, NFC UID) 및 수정 불가능한(Immutable) 출입 로그를 안전하게 저장한다. | SQLite |
+| **웹 프런트엔드** | 시스템의 현재 상태, 인증 결과 요약 및 실시간 헬스 체크 지표를 시각화하여 제공한다. | React, Docusaurus |
 
-## Data vs Control Flow
+## 데이터 및 제어 흐름 (Data vs Control Flow)
 
-**Data Flow:**
-1. Raw hardware inputs (UID, Keystrokes) flow from the Arduino to the Backend.
-2. Camera frames are processed entirely within the Vision Module on the server side.
-3. Authentication results flow from the Backend to the Database as log entries.
+**데이터 흐름 (Data Flow):**
+1. **입력 데이터**: 하드웨어에서 발생한 원시 데이터(UID, 키 입력)가 Arduino를 거쳐 백엔드로 전달된다.
+2. **이미지 처리**: 백엔드는 1차 인증 성공 시 Vision 모듈을 활성화한다. Vision 모듈은 서버 내부에서 카메라 프레임을 처리하며, YOLOv8을 통해 얼굴의 특징점을 추출하고 저장된 데이터와 대조한다.
+3. **결과 기록**: 인증의 모든 성공 및 실패 결과는 SQLite 데이터베이스에 로그 형태로 영구 저장된다.
 
-**Control Flow:**
-1. The Backend is the sole authority for access decisions.
-2. If the Backend determines access is granted, it sends an explicit `UNLOCK` serial command to the Arduino.
-3. The Arduino executes the physical relay switch. It does not possess any autonomous decision-making capability regarding access rights.
+**제어 흐름 (Control Flow):**
+1. **중앙 집중식 의사결정**: Arduino는 독자적인 출입 결정 권한이 없으며, 모든 결정은 백엔드 서버에서 수행된다.
+2. **명령 하사**: 모든 인증 단계가 통과된 경우에만 백엔드에서 `UNLOCK` Serial 명령을 Arduino에 전송한다.
+3. **하드웨어 실행**: Arduino는 수신된 명령에 따라 물리적 릴레이 스위치를 작동시킨다. 이는 소프트웨어 장애 시에도 잠금 상태를 유지하는 Fail-Secure 설계를 보장한다.
 
-## Data Flow Diagram
+## 데이터 흐름도 (Data Flow Diagram)
 
 <div style={{ textAlign: 'center', margin: '2rem 0' }}>
   <svg width="700" height="200" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style={{ border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
@@ -97,24 +97,24 @@ The 2FA Smart Door Lock System is composed of several interdependent modules spa
     </defs>
 
     <rect x="50" y="80" width="100" height="40" rx="8" fill="#e2e8f0" stroke="#1e3a8a" strokeWidth="1" />
-    <text x="100" y="105" textAnchor="middle" fill="#0f172a" fontSize="12">Hardware</text>
+    <text x="100" y="105" textAnchor="middle" fill="#0f172a" fontSize="12">하드웨어</text>
 
     <rect x="300" y="80" width="100" height="40" rx="8" fill="#1e3a8a" />
-    <text x="350" y="105" textAnchor="middle" fill="#ffffff" fontSize="12">FastAPI Backend</text>
+    <text x="350" y="105" textAnchor="middle" fill="#ffffff" fontSize="12">FastAPI 백엔드</text>
 
     <rect x="550" y="80" width="100" height="40" rx="8" fill="#e2e8f0" stroke="#1e3a8a" strokeWidth="1" />
-    <text x="600" y="105" textAnchor="middle" fill="#0f172a" fontSize="12">SQLite Log</text>
+    <text x="600" y="105" textAnchor="middle" fill="#0f172a" fontSize="12">SQLite 로그</text>
 
-    {/* Forward flow */}
+    {/* 순방향 흐름 */}
     <path d="M 150 90 L 300 90" stroke="#1e3a8a" strokeWidth="2" fill="none" markerEnd="url(#df-arrow)" />
-    <text x="225" y="80" textAnchor="middle" fill="#334155" fontSize="10">UID/PIN Input</text>
+    <text x="225" y="80" textAnchor="middle" fill="#334155" fontSize="10">UID/PIN 입력</text>
 
-    {/* Return flow */}
+    {/* 역방향 흐름 */}
     <path d="M 300 110 L 150 110" stroke="#1e3a8a" strokeWidth="2" fill="none" markerEnd="url(#df-arrow)" />
-    <text x="225" y="125" textAnchor="middle" fill="#334155" fontSize="10">UNLOCK Command</text>
+    <text x="225" y="125" textAnchor="middle" fill="#334155" fontSize="10">UNLOCK 명령</text>
 
-    {/* Log flow */}
+    {/* 로그 흐름 */}
     <path d="M 400 100 L 550 100" stroke="#1e3a8a" strokeWidth="2" fill="none" markerEnd="url(#df-arrow)" />
-    <text x="475" y="90" textAnchor="middle" fill="#334155" fontSize="10">Log Persistence</text>
+    <text x="475" y="90" textAnchor="middle" fill="#334155" fontSize="10">로그 영구 저장</text>
   </svg>
 </div>
