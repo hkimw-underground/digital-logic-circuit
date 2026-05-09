@@ -28,6 +28,9 @@ NFC/PIN 1차 인증과 YOLOv8 기반 얼굴 인식 2차 인증을 결합한 고�
 * [보안 취약점 분석](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/SECURITY_ANALYSIS)
 * [문제 해결 가이드](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/TROUBLESHOOTING)
 
+## AI Workflow (Jules)
+이 프로젝트는 AI 코딩 에이전트 Jules를 활용하여 개발됩니다. 모든 AI 지원 작업은 [Jules Workflow](docs/jules-workflow.md)에 따라 수행되며, 관리자의 검토 및 승인 후 메인 브랜치에 반영됩니다.
+
 ## Getting Started (실행 방법)
 
 ```bash
