@@ -4,32 +4,29 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Easy to Use',
+    title: '다중 보안 체계',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        NFC/PIN 1차 인증과 얼굴 인식 2차 인증을 결합하여 보안 수준을 강화했습니다.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Fail-Secure 설계',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        서버의 명시적 승인 없이는 잠금이 해제되지 않으며, 장애 시에도 안전을 유지합니다.
       </>
     ),
   },
   {
-    title: 'Powered by React',
+    title: '투명한 기록 관리',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        모든 출입 시도와 인증 결과를 실시간으로 기록하여 철저한 감사 이력을 제공합니다.
       </>
     ),
   },

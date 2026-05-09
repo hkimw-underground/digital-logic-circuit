@@ -69,7 +69,7 @@ export default function Home() {
                 >
                   <h2 className="custom-card-title">문제</h2>
                   <p>
-                    NFC 카드나 PIN 코드에 전적으로 의존하는 단일 요소 인증 시스템은 물리적 도난이나 비밀번호 공유에 취약하다. 자격 증명이 노출될 경우, 시스템은 출입자의 실제 신원을 확인할 로컬 수단이 없다.
+                    NFC 카드나 PIN 번호만 사용하는 기존 방식은 유출이나 복제에 취약하다. 인증 정보가 노출되면 실제 출입자가 누구인지 확인할 방법이 없다는 보안상 한계가 있다.
                   </p>
                 </motion.div>
               </div>
@@ -81,7 +81,7 @@ export default function Home() {
                 >
                   <h2 className="custom-card-title">해결책</h2>
                   <p>
-                    이 실험적 프로토타입은 엄격하게 시행되는 2단계 인증(2FA) 파이프라인을 구현한다. 잠금 릴레이를 해제하기 전에 유효한 1차 자격 증명(NFC/PIN)과 즉각적인 로컬 생체 검증을 모두 요구한다.
+                    1차 인증(NFC/PIN)과 2차 얼굴 인식을 결합한 2단계 인증(2FA) 체계를 구축했다. 모든 단계가 통과되어야만 문이 열리도록 설계하여 보안성을 대폭 강화했다.
                   </p>
                 </motion.div>
               </div>
@@ -94,10 +94,10 @@ export default function Home() {
             <h2 className="text--center margin-bottom--lg">시스템 파이프라인</h2>
             <div className="row text--center">
               {[
-                { title: "1. 입력", desc: "사용자가 하드웨어 키패드에 PIN을 입력하거나 NFC 카드를 태그한다." },
-                { title: "2. 1차 인증", desc: "Backend가 SQLite 데이터베이스를 통해 자격 증명을 검증한다." },
-                { title: "3. 2차 인증", desc: "YOLOv8 Vision 모듈이 얼굴 신원을 캡처하고 확인한다." },
-                { title: "4. 작동", desc: "Backend가 Arduino 릴레이에 명시적인 잠금 해제 명령을 보낸다." }
+                { title: "1. 인증 시도", desc: "NFC 카드 태그 또는 키패드 PIN 입력으로 인증 절차를 시작한다." },
+                { title: "2. 자격 증명 확인", desc: "서버 데이터베이스를 통해 등록된 사용자의 정보와 일치하는지 검증한다." },
+                { title: "3. 얼굴 인식", desc: "YOLOv8 비전 AI가 카메라에 포착된 인물의 신원을 대조하여 본인 여부를 확인한다." },
+                { title: "4. 잠금 해제", desc: "모든 인증을 마친 후 서버의 명령에 따라 안전하게 문을 연다." }
               ].map((item, i) => (
                 <div className="col col--3" key={i}>
                   <motion.div
@@ -127,8 +127,8 @@ export default function Home() {
                   style={{height: '100%'}}
                   whileHover={{ scale: 1.05 }}
                 >
-                  <h3 className="custom-card-title">순차적 2FA</h3>
-                  <p>단일 요소 우회를 방지하는 소프트웨어 기반 검증 파이프라인.</p>
+                  <h3 className="custom-card-title">다중 보안 체계</h3>
+                  <p>두 가지 이상의 서로 다른 인증 수단을 결합하여 단일 요소 인증의 취약점을 보완했다.</p>
                 </motion.div>
               </div>
               <div className="col col--4 margin-bottom--md">
@@ -137,8 +137,8 @@ export default function Home() {
                   style={{height: '100%'}}
                   whileHover={{ scale: 1.05 }}
                 >
-                  <h3 className="custom-card-title">Fail-Secure 하드웨어</h3>
-                  <p>Arduino 컨트롤러는 릴레이를 작동시키기 위해 Backend로부터 지속적이고 긍정적인 권한 부여를 요구한다.</p>
+                  <h3 className="custom-card-title">Fail-Secure 설계</h3>
+                  <p>서버의 명시적인 허가 없이는 동작하지 않으며, 오류 시에도 잠금 상태를 유지한다.</p>
                 </motion.div>
               </div>
               <div className="col col--4 margin-bottom--md">
@@ -147,8 +147,8 @@ export default function Home() {
                   style={{height: '100%'}}
                   whileHover={{ scale: 1.05 }}
                 >
-                  <h3 className="custom-card-title">변경 불가능한 감사</h3>
-                  <p>모든 성공 및 실패 이벤트가 임베디드 SQLite 데이터베이스에 로깅된다.</p>
+                  <h3 className="custom-card-title">투명한 기록 관리</h3>
+                  <p>모든 출입 시도와 인증 결과를 데이터베이스에 기록하여 사후 추적성을 확보했다.</p>
                 </motion.div>
               </div>
             </div>
