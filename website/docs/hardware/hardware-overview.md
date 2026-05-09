@@ -2,25 +2,33 @@
 sidebar_position: 1
 ---
 
-# Hardware Overview
+# 하드웨어 개요
 
-This section details the physical components utilized in the 2FA prototype.
+본 섹션에서는 2FA 스마트 도어락 시스템 프로토타입을 구성하는 주요 하드웨어 구성 요소와 그 역할을 설명한다. 시스템은 제어부, 입력부, 출력부의 세 가지 주요 모듈로 구분된다.
 
-### Core Components
+### 하드웨어 구성 요소
 
-1. **Microcontroller (Arduino Uno/Nano)**
-   - Acts as the peripheral manager. Reads localized sensor data and toggles output pins based on serial instructions.
-2. **RFID/NFC Reader (MFRC522)**
-   - Communicates via SPI protocol to read the UID of 13.56MHz cards/tags.
-3. **4x4 Matrix Keypad**
-   - Provides alternative primary authentication via PIN entry.
-4. **Relay Module**
-   - Acts as an electrically operated switch to control high-current circuits (e.g., electronic door strikes or magnetic locks).
+#### 1. 제어 모듈 (Processing)
+- **Arduino Uno/Nano**
+  - 시스템의 말단 제어 장치 역할을 수행한다. 하드웨어 센서 데이터를 수집하여 Serial 통신으로 백엔드 서버에 전달하며, 서버의 명령에 따라 출력 핀을 제어하여 도어락을 작동시킨다.
 
-### Limitations and Safety Warnings
+#### 2. 입력 모듈 (Input)
+- **RFID/NFC 리더 (MFRC522)**
+  - SPI 프로토콜을 통해 13.56MHz 대역의 카드 또는 태그의 UID를 읽어들인다. 1차 인증 수단(소유)으로 사용된다.
+- **4x4 매트릭스 키패드**
+  - 사용자의 PIN 입력을 처리한다. NFC와 함께 1차 인증 수단(지식)으로 활용된다.
+- **USB 카메라 (Webcam)**
+  - 백엔드 서버에 연결되어 사용자의 안면 이미지를 캡처한다. YOLOv8 기반 2차 인증(생체)을 위한 핵심 입력 장치이다.
 
-When implementing this hardware prototype, several critical engineering constraints must be observed:
+#### 3. 출력 모듈 (Output)
+- **릴레이 모듈 (Relay Module)**
+  - 전자기적 스위치 역할을 하며, Arduino의 낮은 전압 신호로 고전류 회로(전자식 도어 스트라이크 또는 데드볼트)를 제어한다.
 
-- **Logic Levels (3.3V vs 5V):** The MFRC522 module operates strictly on 3.3V logic. Connecting its logic pins directly to a 5V Arduino without level shifting can damage the module or cause unreliable reads. Ensure proper logic level conversion.
-- **Power Isolation:** An electronic lock (solenoid/maglock) draws significant current and produces inductive kickback. **Never power the lock directly from the Arduino's 5V or Vin pins.** The lock must have an independent, appropriately rated power supply. The relay should provide complete optical and galvanic isolation between the Arduino and the lock circuit.
-- **Fail-Secure vs. Fail-Safe:** Depending on the physical lock mechanism chosen, the system behavior during a total power failure will vary. The prototype assumes a standard electronic strike (fail-secure), which remains locked when power is lost.
+### 구현 시 주의사항 및 안전 경고
+
+하드웨어 프로토타입 구현 및 테스트 시 다음의 기술적 제약 사항을 반드시 준수해야 한다.
+
+- **논리 레벨 (Logic Levels):** MFRC522 모듈은 3.3V 논리 레벨에서 동작한다. 5V 출력을 사용하는 Arduino의 핀을 직접 연결할 경우 모듈 손상이나 데이터 오류가 발생할 수 있으므로, 적절한 전압 분배 회로 또는 레벨 시프터를 사용해야 한다.
+- **전원 분리 (Power Isolation):** 전자식 도어락(Solenoid)은 동작 시 높은 전류를 소모하며 역기전력을 발생시킨다. **절대로 도어락의 전원을 Arduino의 핀에서 직접 공급받지 않아야 한다.** 반드시 별도의 독립된 외부 전원을 사용해야 하며, 릴레이를 통해 Arduino 제어 회로와 물리적으로 격리되어야 한다.
+- **Fail-Secure 설계:** 본 프로토타입은 전원이 차단되었을 때 잠금 상태를 유지하는 Fail-Secure 방식의 전자식 스트라이크 사용을 가정한다. 실제 환경 적용 시 화재나 비상 상황을 대비한 수동 개폐 수단을 고려해야 한다.
+- **Serial 통신 안정성:** Arduino와 백엔드 서버 간의 Serial 통신은 노이즈에 민감할 수 있다. 안정적인 동작을 위해 고품질의 USB 케이블 사용 및 접지(GND) 공유를 확인해야 한다.
