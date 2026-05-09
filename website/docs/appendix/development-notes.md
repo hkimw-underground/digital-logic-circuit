@@ -4,20 +4,20 @@ sidebar_position: 1
 
 # 개발 방법론 (Development Methodology)
 
-이 부록(Appendix)에서는 2FA 프로토타입 개발 과정에서 이루어진 엔지니어링 방법론과 반복적인 의사 결정 사항들을 자세히 설명한다.
+이 부록에서는 2FA 스마트 도어락 프로토타입 개발 과정에서 적용된 주요 엔지니어링 방법론과 단계별 의사결정 과정을 기록한다.
 
-## 반복적 개발 단계 (Iterative Development Phases)
+## 단계적 개발 프로세스 (Incremental Development Process)
 
-이 프로젝트는 복잡성을 분리하기 위해 순차적인 단계로 실행되었다.
+본 프로젝트는 하드웨어와 소프트웨어의 복잡성을 분리하고 시스템 안정성을 확보하기 위해 다음과 같은 4단계 프로세스를 거쳐 진행되었다.
 
-### 1단계: 하드웨어 추상화 (Phase 1: Hardware Abstraction)
-초기 개발은 Arduino 펌웨어에만 독점적으로 집중했다. 목표는 MFRC522 SPI 통신 및 Matrix Keypad 폴링(Polling)을 간단하고 안정적인 시리얼 인터페이스로 추상화하는 것이었다. 이를 통해 Backend는 하드웨어 장비를 블랙박스(Black-box) I/O 스트림으로 취급할 수 있게 되었다.
+### 1단계: 하드웨어 추상화 및 인터페이스 설계
+초기 개발 단계에서는 Arduino 펌웨어 구현에 집중하였다. MFRC522 NFC 모듈의 SPI 통신과 4x4 키패드의 스캔 로직을 독립적인 모듈로 구현하고, 이를 표준화된 시리얼 메시지 프로토콜(`WAKEUP:TYPE:VALUE`)로 추상화하였다. 이를 통해 상위 백엔드 시스템은 하드웨어의 세부 구현을 알 필요 없이 스트림 기반의 I/O 장치로 제어할 수 있게 되었다.
 
-### 2단계: 핵심 인증 로직 (Phase 2: Core Authentication Logic)
-Python Backend는 테스트 주도 개발(TDD / Test-Driven Development) 원칙을 사용하여 개발되었다. 1차 인증 스레드(Thread)를 잠그지 않고 대시보드(Dashboard)의 동시 읽기 액세스를 제공하기 위해 WAL(Write-Ahead Logging) 모드의 SQLite를 선택했다.
+### 2단계: 백엔드 핵심 로직 및 데이터 관리
+백엔드 서버는 테스트 주도 개발(TDD) 방식을 채택하여 인증 로직의 신뢰성을 확보하였다. 데이터베이스로는 SQLite를 사용하되, 실시간 로그 기록과 대시보드 조회가 동시에 발생하는 환경에서 데이터 무결성을 보장하기 위해 Write-Ahead Logging(WAL) 모드를 활성화하였다. 이는 동시성 제어 문제를 해결하는 핵심적인 결정이었다.
 
-### 3단계: 비전 통합 (Phase 3: Vision Integration)
-표준 CPU/Edge 하드웨어에서 속도와 정확도의 균형을 맞추기 위해 얼굴 추출 용도로 YOLOv8을 통합했다. 초기 구현에서는 조명이 어두운 환경에서 오탐(False Positive)이 발생하는 문제가 있었으나, 엄격한 신뢰도 임계값(Confidence Threshold)을 구현하고 최소 경계 상자(Bounding-box) 크기를 강제함으로써 완화했다.
+### 3단계: 비전 AI 최적화 및 통합
+얼굴 인식 단계에서는 제한된 컴퓨팅 자원에서 실시간성을 확보하기 위해 YOLOv8 모델을 통합하였다. 초기 단계에서 발생한 환경 변화(조명, 각도)에 따른 오탐지 문제를 해결하기 위해, 신뢰도 임계값(Confidence Threshold)을 상향 조정하고 얼굴 영역의 최소 크기 조건을 엄격하게 적용하는 최적화 과정을 거쳤다.
 
-### 4단계: 시스템 통합 (Phase 4: System Integration)
-마지막 단계에서는 Serial Manager를 Vision 파이프라인에 연결했다. 가장 큰 과제는 Vision 모듈이 CPU를 차단(Block)하는 동안 비동기 시리얼 시간 초과(Asynchronous Serial Timeouts)를 관리하는 것이었다. 이는 시리얼 리스너(Serial Listener)를 전용 백그라운드 스레드로 분리(Decoupling)하여 해결했다.
+### 4단계: 비동기 시스템 통합 및 병목 해결
+최종 통합 단계에서 발생한 가장 큰 기술적 과제는 고부하 비전 처리 프로세스가 시리얼 통신 리스너를 차단(Blocking)하는 현상이었다. 이를 해결하기 위해 시리얼 통신 관리 로직을 전용 백그라운드 스레드로 분리하고, 메시지 큐를 통한 비동기 이벤트 처리 방식을 도입하여 시스템 전반의 응답성을 개선하였다.
