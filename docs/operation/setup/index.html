@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.0">
 <title data-rh="true">시스템 설정 및 배포 가이드 (System Setup and Deployment) | 2FA 스마트 도어락 시스템</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/operation/setup"><meta data-rh="true" property="og:locale" content="ko"><meta data-rh="true" name="docusaurus_locale" content="ko"><meta data-rh="true" name="docsearch:language" content="ko"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="시스템 설정 및 배포 가이드 (System Setup and Deployment) | 2FA 스마트 도어락 시스템"><meta data-rh="true" name="description" content="본 문서는 2FA Smart Door Lock System의 하드웨어 프로토타입 구성과 소프트웨어 인프라 빌드 및 배포를 위한 표준 절차를 기술한다."><meta data-rh="true" property="og:description" content="본 문서는 2FA Smart Door Lock System의 하드웨어 프로토타입 구성과 소프트웨어 인프라 빌드 및 배포를 위한 표준 절차를 기술한다."><link data-rh="true" rel="icon" href="/digital-logic-circuit/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/operation/setup"><link data-rh="true" rel="alternate" href="https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/operation/setup" hreflang="ko"><link data-rh="true" rel="alternate" href="https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/operation/setup" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"시스템 설정 및 배포 가이드 (System Setup and Deployment)","item":"https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/operation/setup"}]}</script><link rel="stylesheet" href="/digital-logic-circuit/assets/css/styles.a1e3e4a9.css">
-<script src="/digital-logic-circuit/assets/js/runtime~main.dcb96694.js" defer="defer"></script>
+<script src="/digital-logic-circuit/assets/js/runtime~main.60f313d8.js" defer="defer"></script>
 <script src="/digital-logic-circuit/assets/js/main.96179590.js" defer="defer"></script>
 </head>
 <body>
@@ -16,7 +16,7 @@
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="저장소-구조-repository-structure">저장소 구조 (Repository Structure)<a href="#저장소-구조-repository-structure" class="hash-link" aria-label="저장소 구조 (Repository Structure)에 대한 직접 링크" title="저장소 구조 (Repository Structure)에 대한 직접 링크" translate="no">​</a></h2>
 <p>프로젝트는 크게 세 가지 도메인으로 구성된다.</p>
 <ul>
-<li class=""><code>/arduino</code>: 마이크로컨트롤러용 C++ 펌웨어 (<code>doorlock.ino</code>)</li>
+<li class=""><code>/arduino</code>: 마이크로컨트롤러용 C++ 펌웨어. 현재 시연 기준은 <code>arduino/doorlock_firmware/doorlock_firmware.ino</code>이다.</li>
 <li class=""><code>/server</code>: Python FastAPI Backend, SQLite 데이터베이스, OpenCV/YOLOv8 Vision AI 모듈</li>
 <li class=""><code>/website</code>: Docusaurus 기반 기술 문서 및 React 모니터링 대시보드</li>
 </ul>
@@ -24,10 +24,10 @@
 <p>시스템 구축을 위해 다음의 하드웨어 및 소프트웨어 환경이 필요하다.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="하드웨어-hardware">하드웨어 (Hardware)<a href="#하드웨어-hardware" class="hash-link" aria-label="하드웨어 (Hardware)에 대한 직접 링크" title="하드웨어 (Hardware)에 대한 직접 링크" translate="no">​</a></h3>
 <ul>
-<li class=""><strong>Main Board</strong>: Arduino Uno 또는 Nano</li>
-<li class=""><strong>Sensors</strong>: MFRC522 RFID 모듈, 4x4 Matrix Keypad</li>
-<li class=""><strong>Actuator</strong>: 5V/12V Relay 모듈 및 도어락 솔레노이드</li>
-<li class=""><strong>Camera</strong>: 표준 USB 웹캠 (Vision AI용)</li>
+<li class=""><strong>Main Board</strong>: Arduino UNO R4 WiFi</li>
+<li class=""><strong>Sensors</strong>: MFRC522 RFID 모듈, TTP229 터치 키패드</li>
+<li class=""><strong>Actuator</strong>: SG-90 서보모터</li>
+<li class=""><strong>Camera</strong>: 표준 USB 웹캠, IP 카메라, 또는 USB-C로 연결한 ESP32-CAM Serial JPEG 소스</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="소프트웨어-software">소프트웨어 (Software)<a href="#소프트웨어-software" class="hash-link" aria-label="소프트웨어 (Software)에 대한 직접 링크" title="소프트웨어 (Software)에 대한 직접 링크" translate="no">​</a></h3>
 <ul>
@@ -39,7 +39,7 @@
 <p>물리적 조립 전 다음의 공학적 제약 사항을 반드시 준수해야 한다.</p>
 <ol>
 <li class=""><strong>로직 레벨 (Logic Levels)</strong>: MFRC522 모듈은 3.3V 전압에서 동작한다. Arduino의 5V 핀에 직접 연결할 경우 모듈이 손상될 수 있으므로 전압 레벨 변환에 유의한다.</li>
-<li class=""><strong>전원 격리 (Power Isolation)</strong>: Arduino GPIO 핀은 도어락과 같은 고전류 부하를 직접 구동할 수 없다. 반드시 Relay를 통해 외부 전원과 논리 회로를 격리한다.</li>
+<li class=""><strong>전원 관리 (Power Management)</strong>: Arduino GPIO 핀은 서보나 부저 전원을 직접 공급하지 않는다. 서보/부저는 5V 전원 레일에서 공급하고 모든 GND를 공통으로 묶는다.</li>
 <li class=""><strong>Fail-Safe 설계</strong>: 본 시스템은 실험용 프로토타입이다. 실제 보안이 필요한 환경에 적용하기 전, 전원 차단 시 잠금 상태 유지(Fail-Secure) 또는 해제(Fail-Safe) 여부를 하드웨어 특성에 맞춰 검토해야 한다.</li>
 </ol>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="소프트웨어-설치-및-실행">소프트웨어 설치 및 실행<a href="#소프트웨어-설치-및-실행" class="hash-link" aria-label="소프트웨어 설치 및 실행에 대한 직접 링크" title="소프트웨어 설치 및 실행에 대한 직접 링크" translate="no">​</a></h2>
@@ -47,15 +47,18 @@
 <div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">cd website</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">npm install</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">npm run build</span><br></div></code></pre></div></div>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="백엔드-서버-fastapi">백엔드 서버 (FastAPI)<a href="#백엔드-서버-fastapi" class="hash-link" aria-label="백엔드 서버 (FastAPI)에 대한 직접 링크" title="백엔드 서버 (FastAPI)에 대한 직접 링크" translate="no">​</a></h3>
 <p>의존성 설치가 제한된 환경에서는 시스템 표준 라이브러리를 최대한 활용한다.</p>
-<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain"># 가상 환경 활성화</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">source .venv/bin/activate</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"># 서버 실행</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">python3 server/main.py</span><br></div></code></pre></div></div>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain"># 가상 환경 활성화</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">source .venv/bin/activate</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"># 실제 하드웨어 실행 예시</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">DOORLOCK_SERIAL_PORT=auto \</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">DOORLOCK_VISION_MOCK=false \</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">DOORLOCK_YOLO_ENABLED=false \</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">python3 server/main.py</span><br></div></code></pre></div></div>
+<p>서버는 <code>/dev/ttyACM*</code>, <code>/dev/ttyUSB*</code>를 스캔하고 Arduino 펌웨어의 <code>PING</code> 응답으로 포트를 식별한다. 카메라/얼굴 등록이 준비되지 않은 상태에서 Serial/서보 동작만 먼저 확인하려면 <code>DOORLOCK_VISION_MOCK=true</code>로 실행한다.</p>
+<p>ESP32-CAM을 USB-C로 직접 연결하는 경우에는 일반 웹캠처럼 잡히지 않는다. ESP32-CAM에 <code>esp32cam/serial_camera/serial_camera.ino</code>를 업로드한 뒤 다음처럼 실행한다.</p>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">DOORLOCK_SERIAL_PORT=auto \</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">DOORLOCK_CAMERA_URL=serial:auto \</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">DOORLOCK_ESP32CAM_BAUD_RATE=921600 \</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">DOORLOCK_VISION_MOCK=false \</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">DOORLOCK_YOLO_ENABLED=false \</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">python3 server/main.py</span><br></div></code></pre></div></div>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="테스트-및-검증-testing">테스트 및 검증 (Testing)<a href="#테스트-및-검증-testing" class="hash-link" aria-label="테스트 및 검증 (Testing)에 대한 직접 링크" title="테스트 및 검증 (Testing)에 대한 직접 링크" translate="no">​</a></h3>
 <p><code>unittest</code> 프레임워크를 통해 Backend 로직을 검증한다.</p>
 <div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">source .venv/bin/activate</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">python3 -B -m unittest discover -s server -p &#x27;test*.py&#x27;</span><br></div></code></pre></div></div>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="모의-실행-모드-mock-execution">모의 실행 모드 (Mock Execution)<a href="#모의-실행-모드-mock-execution" class="hash-link" aria-label="모의 실행 모드 (Mock Execution)에 대한 직접 링크" title="모의 실행 모드 (Mock Execution)에 대한 직접 링크" translate="no">​</a></h2>
-<p>물리적 하드웨어(Arduino, 카메라, 릴레이)가 없는 CI/CD 환경이나 클라우드 작업 환경에서는 시뮬레이션 모드를 지원한다.</p>
+<p>물리적 하드웨어(Arduino, 카메라, 서보)가 없는 CI/CD 환경이나 클라우드 작업 환경에서는 시뮬레이션 모드를 지원한다.</p>
 <ul>
 <li class=""><strong>Vision AI Mocking</strong>: 환경 변수 <code>DOORLOCK_VISION_MOCK=1</code>을 설정하여 카메라 입력 없이 정적 테스트 데이터로 인증 흐름을 검증한다.</li>
-<li class=""><strong>Hardware Mocking</strong>: <code>python3 server/mock_arduino.py</code>를 실행하여 NFC 태그나 PIN 입력을 소프트웨어적으로 시뮬레이션한다.</li>
+<li class=""><strong>Hardware Mocking</strong>: <code>python3 server/fake_arduino.py</code>를 실행하여 PTY 기반 가상 Serial 장치로 NFC 태그나 PIN 입력을 시뮬레이션한다.</li>
 </ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="배포-및-게시-github-pages">배포 및 게시 (GitHub Pages)<a href="#배포-및-게시-github-pages" class="hash-link" aria-label="배포 및 게시 (GitHub Pages)에 대한 직접 링크" title="배포 및 게시 (GitHub Pages)에 대한 직접 링크" translate="no">​</a></h2>
 <p>문서 사이트는 GitHub Pages를 통해 호스팅된다.</p>
