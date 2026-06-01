@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # 인증 흐름 (Authentication Flow)
 
-본 시스템의 2단계 인증(2FA) 프로세스는 두 개의 독립적인 검증 단계를 순차적으로 완료해야 한다. 파이프라인의 어느 지점에서든 검증에 실패하면 즉시 프로세스가 중단되고, 실패 시도가 기록되며, 릴레이(Relay)는 잠금 상태를 유지한다.
+본 시스템의 2단계 인증(2FA) 프로세스는 두 개의 독립적인 검증 단계를 순차적으로 완료해야 한다. 파이프라인의 어느 지점에서든 검증에 실패하면 즉시 프로세스가 중단되고, 실패 시도가 기록되며, 서보 구동부는 잠금 상태를 유지한다.
 
 ## 검증 파이프라인 (Verification Pipeline)
 
@@ -71,7 +71,7 @@ sidebar_position: 5
     <text x="550" y="275" textAnchor="middle" fill="#059669" fontSize="12">8a. 성공 로그 기록 (EVENT_SUCCESS)</text>
 
     <line x1="400" y1="305" x2="255" y2="305" stroke="#059669" strokeWidth="2" markerEnd="url(#arrow-green)" />
-    <text x="325" y="300" textAnchor="middle" fill="#059669" fontSize="12">9a. 잠금 해제 명령 전송 (UNLOCK)</text>
+    <text x="325" y="300" textAnchor="middle" fill="#059669" fontSize="12">9a. 잠금 해제 명령 전송 (OPEN_DOOR)</text>
 
     <rect x="90" y="330" width="620" height="70" fill="#fff1f2" stroke="#e11d48" strokeWidth="1" />
     <text x="95" y="345" fill="#e11d48" fontWeight="bold" fontSize="12">불일치 시 (Match Failed)</text>
@@ -90,8 +90,8 @@ sidebar_position: 5
 본 시스템은 **Fail-Secure**(장애 시 보안 유지) 원칙에 따라 설계되었다.
 
 1. **NFC / PIN 인증 실패:**
-   - NFC UID가 등록되지 않았거나 PIN 해시가 일치하지 않는 경우, 시스템은 `PRIMARY_AUTH_FAILED` 이벤트를 기록한다. 이 단계에서 실패하면 Vision AI 모듈은 호출되지 않는다.
+   - NFC UID가 등록되지 않았거나 PIN 해시가 일치하지 않는 경우, 시스템은 `UNAUTHORIZED` 이벤트를 기록한다. 이 단계에서 실패하면 Vision AI 모듈은 호출되지 않는다.
 2. **얼굴 인식(Face Verification) 실패:**
-   - 유효한 1차 인증 수단이 제공되었더라도 카메라가 얼굴을 감지하지 못하거나, 여러 얼굴이 감지되어 인증 대상이 모호한 경우, 또는 감지된 얼굴이 해당 UID의 등록된 프로필과 일치하지 않는 경우 시스템은 `SECONDARY_AUTH_FAILED` 이벤트를 기록한다.
+   - 유효한 1차 인증 수단이 제공되었더라도 카메라가 얼굴을 감지하지 못하거나 등록된 얼굴과 일치하지 않는 경우 시스템은 `FINAL_FAIL` 이벤트를 기록한다.
 3. **하드웨어 및 타임아웃 오류:**
-   - Backend와 Arduino 간의 연결이 끊어지거나 Vision 모듈에서 타임아웃이 발생하는 경우, Backend는 예외를 처리하고 `SYSTEM_ERROR`를 기록한다. Arduino는 잠금 해제를 위해 Backend로부터 명시적인 승인 명령을 받아야 하며, 별도의 명령이 없으면 릴레이는 잠긴 상태를 유지한다.
+   - Backend와 Arduino 간의 연결이 끊어지거나 Vision 모듈에서 타임아웃이 발생하는 경우, Arduino는 잠금 해제를 위해 Backend로부터 명시적인 `OPEN_DOOR` 명령을 받아야 하며, 별도의 명령이 없으면 잠김 상태를 유지한다.

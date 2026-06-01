@@ -3,128 +3,361 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Users - Doorlock</title>
+    <title>사용자 관리 — 2차 인증 스마트 도어락</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700;800&family=Roboto+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&display=swap" rel="stylesheet">
+    <link href="/static/app.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">2FA Doorlock</a>
-            <div>
-                <a href="/register" class="btn btn-outline-light btn-sm">Add User</a>
-            </div>
-        </div>
-    </nav>
+<body class="ide-page user-directory-page">
+    <header class="ide-topbar">
+        <a class="ide-brand text-decoration-none text-reset" href="/">
+            <span class="ide-brand-mark"><span class="material-symbols-rounded" aria-hidden="true">badge</span></span>
+            <span>
+                <span class="ide-brand-title">사용자 관리</span>
+                <span class="ide-brand-subtitle">사용자별 인증 정보와 출입 기록</span>
+            </span>
+        </a>
+        <nav class="ide-tabs">
+            <a href="/" class="ide-tab"><span class="material-symbols-rounded" aria-hidden="true">dashboard</span>대시보드</a>
+            <a href="/hardware" class="ide-tab"><span class="material-symbols-rounded" aria-hidden="true">developer_board</span>하드웨어</a>
+            <a href="/logs_page" class="ide-tab"><span class="material-symbols-rounded" aria-hidden="true">list_alt</span>전체 기록</a>
+            <a href="/users_page" class="ide-tab active"><span class="material-symbols-rounded" aria-hidden="true">groups</span>사용자 관리</a>
+            <a href="/register" class="ide-tab primary"><span class="material-symbols-rounded" aria-hidden="true">person_add</span>새 사용자 등록</a>
+        </nav>
+    </header>
 
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card shadow">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 text-primary">Users</h5>
-                        <a href="/" class="btn btn-sm btn-link">Back to Logs</a>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-4">ID</th>
-                                        <th>Username</th>
-                                        <th>NFC UID</th>
-                                        <th class="text-end pe-4">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="user-body">
-                                    <tr><td colspan="4" class="text-center py-4">Loading...</td></tr>
-                                </tbody>
-                            </table>
+    <main class="directory-shell">
+        <aside class="directory-sidebar">
+            <div class="directory-toolbar">
+                <div>
+                    <h1>등록 사용자</h1>
+                    <span id="count">동기화 중...</span>
+                </div>
+                <button class="icon-button" type="button" onclick="fetchUsers()" aria-label="사용자 새로고침">
+                    <span class="material-symbols-rounded" aria-hidden="true">refresh</span>
+                </button>
+            </div>
+            <div class="directory-search">
+                <span class="material-symbols-rounded" aria-hidden="true">search</span>
+                <input id="user-search" type="search" placeholder="이름, 이메일, NFC, 식별자 검색" autocomplete="off">
+            </div>
+            <div id="user-body" class="member-list" aria-label="등록된 사용자 목록">
+                <div class="empty-cell">사용자 목록을 불러오는 중...</div>
+            </div>
+        </aside>
+
+        <section class="member-dossier">
+            <div id="member-empty" class="dossier-empty">
+                <span class="material-symbols-rounded" aria-hidden="true">person_search</span>
+                <strong>사용자를 선택하세요</strong>
+                <span>왼쪽 목록에서 사용자를 선택하면 회원 정보와 출입 기록이 표시됩니다.</span>
+            </div>
+
+            <div id="member-detail" class="dossier-layout d-none">
+                <section class="dossier-hero">
+                    <div class="profile-photo" id="profile-photo">--</div>
+                    <div class="profile-heading">
+                        <div class="profile-kicker">회원 정보</div>
+                        <h2 id="profile-name">-</h2>
+                        <div class="profile-subline">
+                            <span class="method-pill" id="profile-nfc">NFC -</span>
+                            <span class="method-pill" id="profile-face">얼굴 정보 -</span>
                         </div>
                     </div>
+                    <div class="profile-actions">
+                        <a href="/register" class="ide-button">
+                            <span class="material-symbols-rounded" aria-hidden="true">person_add</span>신규 등록
+                        </a>
+                        <button id="detail-delete" class="delete-btn" type="button">
+                            <span class="material-symbols-rounded" aria-hidden="true">delete</span>삭제
+                        </button>
+                    </div>
+                </section>
+
+                <section class="dossier-stats">
+                    <div class="dossier-stat">
+                        <span>출입 횟수</span>
+                        <strong id="stat-success">0</strong>
+                    </div>
+                    <div class="dossier-stat">
+                        <span>인증 실패</span>
+                        <strong id="stat-fail">0</strong>
+                    </div>
+                    <div class="dossier-stat">
+                        <span>전체 기록</span>
+                        <strong id="stat-total">0</strong>
+                    </div>
+                    <div class="dossier-stat">
+                        <span>최근 출입</span>
+                        <strong id="stat-last">-</strong>
+                    </div>
+                </section>
+
+                <section class="dossier-card">
+                    <div class="dossier-card-head">
+                        <h3>회원 등록 정보</h3>
+                        <span class="status-badge bg-secondary">등록 정보</span>
+                    </div>
+                    <div class="profile-grid">
+                        <div class="profile-field">
+                            <span>이름</span>
+                            <strong id="field-name">-</strong>
+                        </div>
+                        <div class="profile-field">
+                            <span>이메일</span>
+                            <strong id="field-email">-</strong>
+                        </div>
+                        <div class="profile-field">
+                            <span>연락처</span>
+                            <strong id="field-phone">-</strong>
+                        </div>
+                        <div class="profile-field">
+                            <span>주소</span>
+                            <strong id="field-address">-</strong>
+                        </div>
+                        <div class="profile-field">
+                            <span>고유 식별자</span>
+                            <strong id="field-uuid" class="mono">-</strong>
+                        </div>
+                        <div class="profile-field">
+                            <span>등록 번호</span>
+                            <strong id="field-id" class="mono">-</strong>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dossier-card dossier-log-card">
+                    <div class="dossier-card-head">
+                        <div>
+                            <h3 id="activity-title">출입 기록</h3>
+                            <span id="activity-summary">선택된 사용자의 인증과 출입 이력</span>
+                        </div>
+                        <span class="status-badge bg-secondary">개인 기록</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="log-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">시간</th>
+                                    <th>인증 수단</th>
+                                    <th>결과</th>
+                                    <th class="pe-4">인증 사진</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activity-body">
+                                <tr><td colspan="4" class="empty-cell">선택된 사용자가 없습니다.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal fade" id="snapshotModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title mono" style="font-size: 0.9rem;">인증 사진</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-0" style="background-color: #020617;">
+                    <img id="snapshotImage" src="" alt="인증 사진" class="img-fluid" style="max-height: 520px; width: 100%; object-fit: contain;">
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let usersCache = [];
+        let selectedUserId = null;
+        let snapshotModal;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            snapshotModal = new bootstrap.Modal(document.getElementById('snapshotModal'));
+            document.getElementById('user-search').addEventListener('input', renderUserList);
+            fetchUsers();
+        });
+
         const escapeHtml = (value) => {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
             return String(value ?? '').replace(/[&<>"']/g, (char) => map[char]);
         };
+        const formatValue = (value) => {
+            const text = String(value ?? '').trim();
+            return text || '-';
+        };
+        const initials = (name) => {
+            const text = String(name || '').trim();
+            if (!text) return '--';
+            return Array.from(text).slice(0, 2).join('');
+        };
+        const getStatusBadge = (status) => {
+            const value = String(status ?? '');
+            const safe = escapeHtml(value);
+            if (value.includes('SUCCESS')) return `<span class="status-badge bg-success">${safe}</span>`;
+            if (value.includes('FAIL') || value.includes('DENIED') || value.includes('UNAUTHORIZED')) return `<span class="status-badge bg-danger">${safe}</span>`;
+            return `<span class="status-badge bg-secondary">${safe}</span>`;
+        };
+
+        function showSnapshot(logId) {
+            const img = document.getElementById('snapshotImage');
+            img.src = `/api/logs/${encodeURIComponent(logId)}/snapshot?t=${Date.now()}`;
+            snapshotModal.show();
+        }
 
         async function fetchUsers() {
+            const countEl = document.getElementById('count');
+            const body = document.getElementById('user-body');
             try {
-                const response = await fetch('/api/users');
-                const users = await response.json();
-                const tableBody = document.getElementById('user-body');
-                
-                tableBody.innerHTML = '';
-                if (users.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No users yet.</td></tr>';
+                const res = await fetch('/api/users');
+                usersCache = await res.json();
+                countEl.textContent = `${usersCache.length}명 등록됨`;
+                renderUserList();
+                if (usersCache.length === 0) {
+                    clearDetail();
+                    body.innerHTML = '<div class="empty-cell">등록된 사용자가 없습니다.</div>';
                     return;
                 }
-
-                users.forEach((user) => {
-                    const row = tableBody.insertRow();
-                    const userId = Number(user.id);
-                    row.innerHTML = `
-                        <td class="ps-4 text-muted">${escapeHtml(userId)}</td>
-                        <td class="fw-bold">${escapeHtml(user.username)}</td>
-                        <td>${escapeHtml(user.nfc_uid || '-')}</td>
-                        <td class="text-end pe-4">
-                            <button class="btn btn-outline-danger btn-sm delete-btn" type="button" aria-label="Delete user ${escapeHtml(user.username)}">
-                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                <span class="btn-text">Delete</span>
-                            </button>
-                        </td>
-                    `;
-                    row.querySelector('.delete-btn').addEventListener('click', function() {
-                        deleteUser(userId, user.username, this);
-                    });
-                });
-            } catch (err) {
-                console.error("Failed to fetch users:", err);
+                const stillExists = usersCache.some((user) => Number(user.id) === Number(selectedUserId));
+                const nextUser = stillExists ? selectedUserId : usersCache[0].id;
+                await fetchUserActivity(nextUser);
+            } catch (e) {
+                countEl.textContent = '동기화 실패';
+                body.innerHTML = '<div class="empty-cell text-danger">사용자 목록을 불러오지 못했습니다.</div>';
+                clearDetail('사용자 목록을 불러오지 못했습니다.');
             }
         }
 
-        async function deleteUser(id, name, btnElement) {
-            if (!confirm(`Delete user "${name}"? Face data will also be removed.`)) return;
-            
-            const spinner = btnElement.querySelector('.spinner-border');
-            const btnText = btnElement.querySelector('.btn-text');
+        function renderUserList() {
+            const body = document.getElementById('user-body');
+            const query = document.getElementById('user-search').value.trim().toLowerCase();
+            const users = usersCache.filter((user) => {
+                const haystack = `${user.username || ''} ${user.nfc_uid || ''} ${user.member_uuid || ''} ${user.email || ''}`.toLowerCase();
+                return haystack.includes(query);
+            });
 
-            btnElement.disabled = true;
-            spinner.classList.remove('d-none');
-            btnText.textContent = 'Deleting...';
+            if (users.length === 0) {
+                body.innerHTML = `<div class="empty-cell">${query ? '검색 결과가 없습니다.' : '등록된 사용자가 없습니다.'}</div>`;
+                return;
+            }
 
+            body.innerHTML = users.map((user) => {
+                const stats = user.stats || {};
+                const active = Number(user.id) === Number(selectedUserId) ? ' active' : '';
+                return `
+                    <article class="member-row${active}" data-user-id="${escapeHtml(user.id)}">
+                        <button class="member-select activity-btn" type="button" onclick="fetchUserActivity(${Number(user.id)})">
+                            <span class="mini-avatar">${escapeHtml(initials(user.username))}</span>
+                            <span class="member-row-main">
+                                <strong>${escapeHtml(user.username)}</strong>
+                                <span>${escapeHtml(user.email || '이메일 미등록')}</span>
+                                <span class="mono">${escapeHtml(user.nfc_uid || '-')}</span>
+                            </span>
+                            <span class="member-row-count">${escapeHtml(stats.successful_entries ?? 0)}회</span>
+                        </button>
+                        <button class="member-delete delete-btn" type="button" onclick="deleteUser(${Number(user.id)})">
+                            <span class="material-symbols-rounded" aria-hidden="true">delete</span>
+                        </button>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        async function fetchUserActivity(id) {
+            selectedUserId = Number(id);
+            renderUserList();
             try {
-                const resp = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-                const result = await resp.json();
-                if (result.success) {
-                    alert(result.message);
-                    fetchUsers();
-                } else {
-                    alert("Error: " + result.message);
-                }
-            } catch (err) {
-                console.error("Failed to delete user:", err);
-                alert("Network error occurred.");
-            } finally {
-                if (document.body.contains(btnElement)) {
-                    btnElement.disabled = false;
-                    spinner.classList.add('d-none');
-                    btnText.textContent = 'Delete';
-                }
+                const res = await fetch(`/api/users/${encodeURIComponent(id)}/activity?limit=120`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'activity fetch failed');
+                renderDetail(data);
+            } catch (e) {
+                clearDetail('사용자 기록을 불러오지 못했습니다.');
             }
         }
-        
-        window.onload = fetchUsers;
+
+        function renderDetail(user) {
+            const stats = user.stats || {};
+            document.getElementById('member-empty').classList.add('d-none');
+            document.getElementById('member-detail').classList.remove('d-none');
+
+            document.getElementById('profile-photo').textContent = initials(user.username);
+            document.getElementById('profile-name').textContent = formatValue(user.username);
+            document.getElementById('profile-nfc').textContent = `NFC ${formatValue(user.nfc_uid)}`;
+            document.getElementById('profile-face').textContent = user.face_enrolled ? '얼굴 등록됨' : '얼굴 미등록';
+            document.getElementById('stat-success').textContent = stats.successful_entries || 0;
+            document.getElementById('stat-fail').textContent = stats.failed_events || 0;
+            document.getElementById('stat-total').textContent = stats.total_events || 0;
+            document.getElementById('stat-last').textContent = formatValue(stats.last_entry_at);
+
+            document.getElementById('field-name').textContent = formatValue(user.username);
+            document.getElementById('field-email').textContent = formatValue(user.email);
+            document.getElementById('field-phone').textContent = formatValue(user.phone);
+            document.getElementById('field-address').textContent = formatValue(user.address);
+            document.getElementById('field-uuid').textContent = formatValue(user.member_uuid);
+            document.getElementById('field-id').textContent = `ID ${formatValue(user.id)}`;
+
+            document.getElementById('activity-title').textContent = `${formatValue(user.username)} 출입 기록`;
+            document.getElementById('activity-summary').textContent =
+                `출입 ${stats.successful_entries || 0}회 / 실패 ${stats.failed_events || 0}회 / 전체 기록 ${stats.total_events || 0}개`;
+            document.getElementById('detail-delete').onclick = () => deleteUser(user.id);
+
+            const body = document.getElementById('activity-body');
+            body.innerHTML = '';
+            if (!user.logs || user.logs.length === 0) {
+                body.innerHTML = '<tr><td colspan="4" class="empty-cell">이 사용자의 출입 기록이 없습니다.</td></tr>';
+                return;
+            }
+
+            user.logs.forEach((log) => {
+                const row = body.insertRow();
+                row.innerHTML = `
+                    <td class="ps-4 mono">${escapeHtml(log.timestamp)}</td>
+                    <td><span class="method-pill">${escapeHtml(log.method)}</span></td>
+                    <td>${getStatusBadge(log.status)}</td>
+                    <td class="pe-4"></td>
+                `;
+                const evidenceCell = row.querySelectorAll('td')[3];
+                if (log.has_snapshot) {
+                    const button = document.createElement('button');
+                    button.className = 'ide-button snapshot-btn';
+                    button.type = 'button';
+                    button.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">image</span>사진 보기';
+                    button.onclick = () => showSnapshot(log.id);
+                    evidenceCell.appendChild(button);
+                } else {
+                    evidenceCell.innerHTML = '<span style="color: var(--muted)">-</span>';
+                }
+            });
+        }
+
+        function clearDetail(message = '왼쪽 목록에서 사용자를 선택하면 회원 정보와 출입 기록이 표시됩니다.') {
+            selectedUserId = null;
+            document.getElementById('member-detail').classList.add('d-none');
+            const empty = document.getElementById('member-empty');
+            empty.classList.remove('d-none');
+            empty.querySelector('span:last-child').textContent = message;
+        }
+
+        async function deleteUser(id) {
+            const user = usersCache.find((entry) => Number(entry.id) === Number(id));
+            const name = user ? user.username : `ID ${id}`;
+            if (!confirm(`"${name}" 사용자를 삭제할까요?\n회원 정보와 얼굴 정보가 삭제되고 기존 기록의 사용자 연결은 해제됩니다.`)) return;
+            try {
+                const r = await fetch(`/api/users/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                const j = await r.json();
+                if (!j.success) throw new Error(j.message || 'delete failed');
+                if (Number(selectedUserId) === Number(id)) selectedUserId = null;
+                await fetchUsers();
+            } catch (e) {
+                alert('삭제에 실패했습니다.');
+            }
+        }
     </script>
 </body>
 </html>

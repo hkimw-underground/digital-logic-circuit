@@ -3,87 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doorlock Logs</title>
+    <title>2차 인증 스마트 도어락</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <style>
-        .alert-blink {
-            animation: blink 1s infinite;
-        }
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        .status-badge {
-            font-size: 0.85em;
-            padding: 5px 10px;
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700;800&family=Roboto+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&display=swap" rel="stylesheet">
+    <link href="/static/app.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">2FA Doorlock</a>
-            <div>
-                <a href="/users_page" class="btn btn-outline-info btn-sm me-2">Users</a>
-                <a href="/register" class="btn btn-outline-light btn-sm">Add</a>
-            </div>
+<body class="dashboard-page ide-page cockpit-page">
+    <header class="ide-topbar">
+        <div class="ide-brand">
+            <span class="ide-brand-mark"><span class="material-symbols-rounded" aria-hidden="true">shield_lock</span></span>
+            <span>
+                <span class="ide-brand-title">2차 인증 스마트 도어락</span>
+                <span class="ide-brand-subtitle">실시간 인증과 출입 제어</span>
+            </span>
         </div>
-    </nav>
+        <nav class="ide-tabs" aria-label="주요 화면">
+            <a href="/" class="ide-tab active"><span class="material-symbols-rounded" aria-hidden="true">dashboard</span>대시보드</a>
+            <a href="/hardware" class="ide-tab"><span class="material-symbols-rounded" aria-hidden="true">developer_board</span>하드웨어</a>
+            <a href="/logs_page" class="ide-tab"><span class="material-symbols-rounded" aria-hidden="true">list_alt</span>전체 기록</a>
+            <a href="/users_page" class="ide-tab"><span class="material-symbols-rounded" aria-hidden="true">groups</span>사용자 관리</a>
+            <a href="/register" class="ide-tab primary"><span class="material-symbols-rounded" aria-hidden="true">person_add</span>사용자 등록</a>
+        </nav>
+    </header>
 
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-10">
-                
-                <div id="alert-box" class="alert alert-danger alert-blink shadow" style="display: none;" role="alert">
-                    <h4 class="alert-heading text-center mb-0">Repeated failed access attempts detected.</h4>
+    <main class="ide-shell">
+        <div id="alert-box" class="ide-alert" role="alert">
+            <span class="material-symbols-rounded me-2" aria-hidden="true">warning</span>보안 경고: 인증 실패가 반복되었습니다.
+        </div>
+
+        <section class="overview-rail" aria-label="현재 시스템 요약">
+            <div id="summary-system-card" class="overview-item warn">
+                <span class="material-symbols-rounded overview-icon" aria-hidden="true">shield</span>
+                <div>
+                    <div class="overview-label">시스템</div>
+                    <div id="summary-system" class="overview-value">확인 중</div>
+                    <div id="summary-system-meta" class="overview-meta">하드웨어 동기화 대기</div>
                 </div>
+            </div>
+            <div id="summary-arduino-card" class="overview-item warn">
+                <span class="material-symbols-rounded overview-icon" aria-hidden="true">developer_board</span>
+                <div>
+                    <div class="overview-label">Arduino</div>
+                    <div id="summary-arduino" class="overview-value">확인 중</div>
+                    <div id="summary-arduino-meta" class="overview-meta">시리얼 포트 탐색 중</div>
+                </div>
+                <button onclick="reconnectHardware('arduino')" class="overview-card-action reconnect-btn" aria-label="Arduino 재연결">
+                    <span class="material-symbols-rounded" aria-hidden="true">cable</span>재연결
+                </button>
+            </div>
+            <div id="summary-camera-card" class="overview-item warn">
+                <span class="material-symbols-rounded overview-icon" aria-hidden="true">photo_camera</span>
+                <div>
+                    <div class="overview-label">얼굴 인증</div>
+                    <div id="summary-camera" class="overview-value">확인 중</div>
+                    <div id="summary-camera-meta" class="overview-meta">ESP32-CAM 상태 대기</div>
+                </div>
+                <button onclick="reconnectHardware('camera')" class="overview-card-action reconnect-btn" aria-label="ESP32-CAM 재연결">
+                    <span class="material-symbols-rounded" aria-hidden="true">photo_camera</span>재연결
+                </button>
+            </div>
+            <div id="summary-event-card" class="overview-item warn">
+                <span class="material-symbols-rounded overview-icon" aria-hidden="true">event_note</span>
+                <div>
+                    <div class="overview-label">최근 결과</div>
+                    <div id="summary-event" class="overview-value">로그 대기</div>
+                    <div id="summary-event-meta" class="overview-meta">최근 인증 기록 확인 중</div>
+                </div>
+            </div>
+            <div class="overview-actions" aria-label="하드웨어 재연결">
+                <button onclick="reconnectHardware('all')" class="ide-button primary reconnect-btn">
+                    <span class="material-symbols-rounded" aria-hidden="true">sync</span>전체 재연결
+                </button>
+                <a href="/hardware" class="ide-button">
+                    <span class="material-symbols-rounded" aria-hidden="true">open_in_new</span>하드웨어
+                </a>
+            </div>
+        </section>
 
-                <div class="card shadow">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 text-primary">Access Logs</h5>
-                        <small class="text-muted" id="last-updated">Updating...</small>
+        <section class="dashboard-hardware-state" aria-label="하드웨어 상태 상세">
+            <div id="status-event-line" class="status-log-line">하드웨어 상태를 아직 동기화하지 않았습니다.</div>
+            <div id="arduino-tile" class="hardware-compact-tile warn">
+                <div class="status-label">Arduino USB 시리얼</div>
+                <div id="status-arduino-line" class="status-line">확인 중...</div>
+                <div id="status-arduino-detail" class="status-detail">/dev/ttyACM* 및 /dev/ttyUSB* 탐색 중</div>
+            </div>
+            <div id="camera-tile" class="hardware-compact-tile warn">
+                <div class="status-label">ESP32-CAM / 얼굴 인증</div>
+                <div id="status-camera-line" class="status-line">확인 중...</div>
+                <div id="status-camera-detail" class="status-detail">카메라 상태 대기 중</div>
+            </div>
+        </section>
+
+        <div class="ide-workspace">
+            <section class="ide-pane camera-pane">
+                <div class="ide-pane-head">
+                    <div>
+                        <h2>카메라 화면</h2>
+                        <span>얼굴 인증 입력 영상</span>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped mb-0 align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-4">Time</th>
-                                        <th>User</th>
-                                        <th>Method</th>
-                                        <th>Status</th>
-                                        <th>Snapshot</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="log-body">
-                                    <tr><td colspan="5" class="text-center py-4">Loading...</td></tr>
-                                </tbody>
-                            </table>
+                    <span class="ide-badge">영상</span>
+                </div>
+                <div class="feed-shell">
+                    <img src="/video_feed" class="cam-feed" alt="카메라 화면">
+                </div>
+            </section>
+
+            <section class="ide-pane control-pane">
+                <div class="ide-pane-head">
+                    <div>
+                        <h2>도어락 제어</h2>
+                        <span>인증 경로와 같은 명령 라인으로 전송</span>
+                    </div>
+                    <span class="ide-badge">제어</span>
+                </div>
+                <div class="command-stack">
+                    <button onclick="controlDoor('open')" class="btn-command open">
+                        <span><span class="material-symbols-rounded me-2" aria-hidden="true">lock_open</span>문 열기</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+                    </button>
+                    <button onclick="controlDoor('lockdown')" class="btn-command lock">
+                        <span><span class="material-symbols-rounded me-2" aria-hidden="true">lock</span>긴급 잠금</span>
+                        <span class="material-symbols-rounded" aria-hidden="true">warning</span>
+                    </button>
+                </div>
+                <div class="command-meta">
+                    <div class="metric">
+                        <div class="metric-label">명령 대상</div>
+                        <div class="metric-value">Arduino 시리얼</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">동작 정책</div>
+                        <div class="metric-value">잠금 우선</div>
+                    </div>
+                </div>
+                <div class="readiness-stack" aria-label="실행 경로">
+                    <div class="readiness-row">
+                        <span class="readiness-dot"></span>
+                        <div>
+                            <strong>1차 인증</strong>
+                            <span>NFC 또는 PIN 입력 대기</span>
+                        </div>
+                    </div>
+                    <div class="readiness-row">
+                        <span class="readiness-dot warn"></span>
+                        <div>
+                            <strong>얼굴 확인</strong>
+                            <span>ESP32-CAM 영상 경로 확인</span>
+                        </div>
+                    </div>
+                    <div class="readiness-row">
+                        <span class="readiness-dot action"></span>
+                        <div>
+                            <strong>출입 명령</strong>
+                            <span>OPEN_DOOR / AUTH_FAIL / LOCKDOWN</span>
                         </div>
                     </div>
                 </div>
-
-            </div>
+            </section>
         </div>
-    </div>
 
-    <!-- Snapshot Modal -->
-    <div class="modal fade" id="snapshotModal" tabindex="-1" aria-labelledby="snapshotModalLabel" aria-hidden="true">
+        <section class="ide-log-panel">
+            <div class="ide-pane-head">
+                <div>
+                    <h2>최신 이벤트 로그</h2>
+                    <span>최근 인증, 차단, 수동 제어 이력만 표시</span>
+                </div>
+                <div class="ide-panel-actions">
+                    <small class="text-muted mono" id="last-updated">업데이트 중...</small>
+                    <a href="/logs_page" class="ide-button">
+                        <span class="material-symbols-rounded" aria-hidden="true">list_alt</span>전체 로그 보기
+                    </a>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="log-table align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">시간</th>
+                            <th>사용자</th>
+                            <th>인증 수단</th>
+                            <th>상태 코드</th>
+                            <th class="pe-4">증거</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-body">
+                        <tr><td colspan="5" class="empty-cell">시스템 로그를 불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal fade" id="snapshotModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="snapshotModalLabel">Snapshot</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header">
+                    <h5 class="modal-title mono" style="font-size: 0.9rem;">증거 스냅샷</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body text-center bg-black">
-                    <img id="snapshotImage" src="" alt="Snapshot" style="max-width: 100%; max-height: 400px; border-radius: 5px;">
+                <div class="modal-body text-center p-0" style="background-color: #000;">
+                    <img id="snapshotImage" src="" alt="스냅샷" class="img-fluid" style="max-height: 500px; width: 100%; object-fit: contain;">
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let snapshotModal;
         document.addEventListener("DOMContentLoaded", () => {
@@ -91,19 +221,47 @@
         });
 
         const escapeHtml = (value) => {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
             return String(value ?? '').replace(/[&<>"']/g, (char) => map[char]);
         };
 
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `custom-toast ${type}`;
+            toast.innerHTML = `<div class="mono" style="font-size: 0.82rem;">${escapeHtml(message)}</div>`;
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 180);
+            }, 4000);
+        }
+
+        async function controlDoor(action) {
+            try {
+                const response = await fetch(`/api/control/${action}`, { method: 'POST' });
+                const data = await response.json();
+                if(data.success) {
+                    showToast(action === 'open' ? '문 열림 명령을 보냈습니다.' : '긴급 잠금 명령을 보냈습니다.', 'success');
+                } else {
+                    showToast(data.message || '명령 실행에 실패했습니다.', 'error');
+                }
+            } catch(e) {
+                showToast('명령 전송 중 네트워크 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        function setReconnectButtons(disabled) {
+            document.querySelectorAll('.reconnect-btn').forEach((button) => {
+                button.disabled = disabled;
+            });
+        }
+
         function showSnapshot(logId) {
             const img = document.getElementById('snapshotImage');
-            img.src = `/api/logs/${encodeURIComponent(logId)}/snapshot?t=${new Date().getTime()}`; // cache busting
+            img.src = `/api/logs/${encodeURIComponent(logId)}/snapshot?t=${new Date().getTime()}`;
             snapshotModal.show();
         }
 
@@ -111,83 +269,231 @@
             const statusValue = String(status ?? '');
             const safeStatus = escapeHtml(statusValue);
             if (statusValue.includes('SUCCESS')) {
-                return `<span class="badge bg-success status-badge">${safeStatus}</span>`;
+                return `<span class="status-badge bg-success">${safeStatus}</span>`;
             } else if (statusValue.includes('FAIL') || statusValue.includes('DENIED') || statusValue.includes('UNAUTHORIZED')) {
-                return `<span class="badge bg-danger status-badge">${safeStatus}</span>`;
-            } else {
-                return `<span class="badge bg-secondary status-badge">${safeStatus}</span>`;
+                return `<span class="status-badge bg-danger">${safeStatus}</span>`;
             }
+            return `<span class="status-badge bg-secondary">${safeStatus}</span>`;
         };
+
+        function summarizeCandidates(candidates) {
+            if (!Array.isArray(candidates) || candidates.length === 0) {
+                return '기록된 후보 포트 없음';
+            }
+            return `후보 포트: ${candidates.slice(0, 5).join(', ')}`;
+        }
+
+        function setTileState(tileId, state) {
+            const tile = document.getElementById(tileId);
+            tile.classList.remove('ok', 'warn', 'bad');
+            tile.classList.add(state);
+        }
+
+        function setSummaryState(cardId, state) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            card.classList.remove('ok', 'warn', 'bad');
+            card.classList.add(state);
+        }
+
+        function setSummaryText(valueId, value, metaId, meta) {
+            const valueNode = document.getElementById(valueId);
+            const metaNode = document.getElementById(metaId);
+            if (valueNode) valueNode.textContent = value;
+            if (metaNode) metaNode.textContent = meta;
+        }
+
+        function displayUsername(value) {
+            const text = String(value || '').trim();
+            return text && text !== 'Unknown' ? text : '알 수 없음';
+        }
+
+        function getLatestEventState(status) {
+            const statusValue = String(status || '');
+            if (statusValue.includes('SUCCESS')) return 'ok';
+            if (statusValue.includes('FAIL') || statusValue.includes('DENIED') || statusValue.includes('UNAUTHORIZED')) return 'bad';
+            return 'warn';
+        }
+
+        function getLatestEventLabel(status) {
+            const statusValue = String(status || '');
+            if (statusValue === 'FINAL_SUCCESS') return '최근 출입 성공';
+            if (statusValue === '1ST_AUTH_SUCCESS') return '1차 인증 성공';
+            if (statusValue === 'FINAL_FAIL') return '최종 인증 실패';
+            if (statusValue === 'UNAUTHORIZED') return '권한 없음';
+            return statusValue || '상태 미확인';
+        }
+
+        function updateHardwareStatus(payload) {
+            const arduino = payload.arduino || {};
+            const camera = payload.camera || {};
+
+            const arduinoConnected = Boolean(arduino.connected);
+            setTileState('arduino-tile', arduinoConnected ? 'ok' : 'bad');
+            setSummaryState('summary-arduino-card', arduinoConnected ? 'ok' : 'bad');
+            document.getElementById('status-arduino-line').textContent = arduinoConnected
+                ? `연결됨 ${arduino.port || ''}`
+                : `연결 안 됨 (${arduino.status || 'unknown'})`;
+            document.getElementById('status-arduino-detail').textContent = arduinoConnected
+                ? `Baud ${arduino.baud_rate || '-'} / 자동 탐지 기준 ${arduino.configured_port || 'auto'}`
+                : `${arduino.last_error || 'Arduino를 연결한 뒤 재시도하세요.'} / ${summarizeCandidates(arduino.candidates)}`;
+            setSummaryText(
+                'summary-arduino',
+                arduinoConnected ? '정상 연결' : '오프라인',
+                'summary-arduino-meta',
+                arduinoConnected ? `${arduino.port || '자동 감지'} · ${arduino.baud_rate || '-'} baud` : (arduino.last_error || 'USB 연결 후 재시도 필요')
+            );
+
+            const cameraMock = camera.status === 'mock' || camera.mock;
+            const cameraConnected = Boolean(camera.connected);
+            setTileState('camera-tile', cameraConnected ? (cameraMock ? 'warn' : 'ok') : 'bad');
+            setSummaryState('summary-camera-card', cameraConnected ? (cameraMock ? 'warn' : 'ok') : 'bad');
+            document.getElementById('status-camera-line').textContent = cameraMock
+                ? '모의 얼굴 인증 모드'
+                : (cameraConnected ? `연결됨 ${camera.port || camera.source || ''}` : `연결 안 됨 (${camera.status || 'unknown'})`);
+            document.getElementById('status-camera-detail').textContent = cameraConnected
+                ? `백엔드 ${camera.backend || '-'} / 소스 ${camera.source || '-'}`
+                : `${camera.last_error || 'ESP32-CAM을 연결한 뒤 재시도하세요.'} / ${summarizeCandidates(camera.candidates)}`;
+            setSummaryText(
+                'summary-camera',
+                cameraMock ? '모의 인증' : (cameraConnected ? '카메라 정상' : '오프라인'),
+                'summary-camera-meta',
+                cameraConnected ? `${camera.backend || 'backend'} · ${camera.source || camera.port || 'source'}` : (camera.last_error || 'ESP32-CAM 연결 필요')
+            );
+
+            const systemReady = arduinoConnected && cameraConnected && !cameraMock;
+            const mockReady = arduinoConnected && cameraConnected && cameraMock;
+            setSummaryState('summary-system-card', systemReady ? 'ok' : (mockReady ? 'warn' : 'bad'));
+            setSummaryText(
+                'summary-system',
+                systemReady ? '실행 가능' : (mockReady ? '모의 인증 대기' : '확인 필요'),
+                'summary-system-meta',
+                systemReady ? '실제 하드웨어 경로 준비됨' : (mockReady ? 'Arduino는 연결, 얼굴 인증은 mock' : '연결 상태를 먼저 확인')
+            );
+
+            const syncedAt = payload.server_time ? new Date(payload.server_time * 1000) : new Date();
+            document.getElementById('status-event-line').textContent =
+                `마지막 동기화 ${syncedAt.toLocaleTimeString()} / Arduino ${arduinoConnected ? '정상' : '오프라인'} / 카메라 ${cameraConnected ? (cameraMock ? '모의' : '정상') : '오프라인'}`;
+        }
+
+        async function fetchStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const payload = await response.json();
+                updateHardwareStatus(payload);
+            } catch (err) {
+                console.error("Failed to fetch hardware status:", err);
+                setTileState('arduino-tile', 'bad');
+                setTileState('camera-tile', 'bad');
+                setSummaryState('summary-system-card', 'bad');
+                setSummaryState('summary-arduino-card', 'bad');
+                setSummaryState('summary-camera-card', 'bad');
+                setSummaryText('summary-system', '상태 API 오류', 'summary-system-meta', '서버 상태 응답을 확인할 수 없음');
+                setSummaryText('summary-arduino', '확인 실패', 'summary-arduino-meta', '상태 API 연결 실패');
+                setSummaryText('summary-camera', '확인 실패', 'summary-camera-meta', '상태 API 연결 실패');
+                document.getElementById('status-event-line').textContent = '하드웨어 상태 API에 연결할 수 없습니다.';
+            }
+        }
+
+        async function reconnectHardware(target) {
+            setReconnectButtons(true);
+            document.getElementById('status-event-line').textContent = `재연결 요청: ${target}`;
+            try {
+                const response = await fetch(`/api/reconnect/${target}`, { method: 'POST' });
+                const payload = await response.json().catch(() => ({}));
+                if (payload.status) {
+                    updateHardwareStatus(payload.status);
+                } else {
+                    await fetchStatus();
+                }
+                const message = payload.message || payload.detail || (response.ok ? '재연결을 완료했습니다.' : '재연결에 실패했습니다.');
+                showToast(message, response.ok && payload.success ? 'success' : 'error');
+            } catch (err) {
+                console.error("Reconnect failed:", err);
+                showToast('재연결 요청에 실패했습니다.', 'error');
+                await fetchStatus();
+            } finally {
+                setReconnectButtons(false);
+            }
+        }
 
         async function fetchLogs() {
             try {
-                const response = await fetch('/api/logs');
+                const response = await fetch('/api/logs?limit=5');
                 const payload = await response.json();
                 const logs = Array.isArray(payload) ? payload : (payload.logs || []);
                 const tableBody = document.getElementById('log-body');
                 const alertBox = document.getElementById('alert-box');
                 const lastUpdated = document.getElementById('last-updated');
-                
+
                 tableBody.innerHTML = '';
                 let failCount = 0;
                 let foundSuccess = false;
+
+                if (logs.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="empty-cell">표시할 로그가 없습니다.</td></tr>';
+                    setSummaryState('summary-event-card', 'warn');
+                    setSummaryText('summary-event', '기록 없음', 'summary-event-meta', '최근 인증 로그가 없습니다');
+                }
 
                 logs.forEach((log) => {
                     const row = tableBody.insertRow();
                     const logId = Number(log.id);
 
                     row.innerHTML = `
-                        <td class="ps-4">${escapeHtml(log.timestamp)}</td>
-                        <td class="fw-bold">${escapeHtml(log.username || 'Unknown')}</td>
-                        <td>${escapeHtml(log.method)}</td>
+                        <td class="ps-4 mono">${escapeHtml(log.timestamp)}</td>
+                        <td>${escapeHtml(displayUsername(log.username))}</td>
+                        <td><span class="method-pill">${escapeHtml(log.method)}</span></td>
                         <td>${getStatusBadge(log.status)}</td>
-                        <td class="snapshot-cell"></td>
+                        <td class="pe-4"></td>
                     `;
 
-                    const snapshotCell = row.querySelector('.snapshot-cell');
+                    const snapshotCell = row.querySelectorAll('td')[4];
                     if (log.has_snapshot && Number.isFinite(logId)) {
                         const button = document.createElement('button');
-                        button.className = 'btn btn-sm btn-outline-danger py-0';
-                        button.type = 'button';
-                        button.textContent = 'View';
-                        button.setAttribute('aria-label', `View snapshot for log from ${escapeHtml(log.timestamp)}`);
+                        button.className = 'ide-button snapshot-btn';
+                        button.innerText = '보기';
                         button.addEventListener('click', () => showSnapshot(logId));
                         snapshotCell.appendChild(button);
                     } else {
-                        const empty = document.createElement('span');
-                        empty.className = 'text-muted';
-                        empty.textContent = '-';
-                        snapshotCell.appendChild(empty);
+                        snapshotCell.innerHTML = `<span style="color: var(--muted)">-</span>`;
                     }
-                    
-                    // 최신 로그부터 연속 실패 횟수를 센다.
+
                     if (!foundSuccess) {
-                        if (log.status === 'UNAUTHORIZED' || log.status === 'FINAL_FAIL') {
-                            failCount++;
-                        } else if (log.status === 'FINAL_SUCCESS' || log.status === '1ST_AUTH_SUCCESS') {
-                            // 성공 기록이 나오면 연속 실패가 끊긴다.
-                            foundSuccess = true;
-                        }
+                        if (log.status === 'UNAUTHORIZED' || log.status === 'FINAL_FAIL') failCount++;
+                        else if (log.status === 'FINAL_SUCCESS' || log.status === '1ST_AUTH_SUCCESS') foundSuccess = true;
                     }
                 });
 
-                const alertActive = Array.isArray(payload) ? failCount >= 3 : Boolean(payload.alert);
-                if (alertActive) {
-                    alertBox.style.display = 'block';
-                } else {
-                    alertBox.style.display = 'none';
+                if (logs.length > 0) {
+                    const latest = logs[0];
+                    setSummaryState('summary-event-card', getLatestEventState(latest.status));
+                    setSummaryText(
+                        'summary-event',
+                        getLatestEventLabel(latest.status),
+                        'summary-event-meta',
+                        `${displayUsername(latest.username)} · ${latest.method || '-'} · ${latest.timestamp || '-'}`
+                    );
                 }
 
-                const now = new Date();
-                lastUpdated.innerText = `Updated: ${now.toLocaleTimeString()}`;
+                const alertActive = Array.isArray(payload) ? failCount >= 3 : Boolean(payload.alert);
+                alertBox.style.display = alertActive ? 'flex' : 'none';
 
+                const now = new Date();
+                lastUpdated.innerHTML = `마지막 동기화: ${now.toLocaleTimeString()}`;
             } catch (err) {
                 console.error("Failed to fetch logs:", err);
+                setSummaryState('summary-event-card', 'bad');
+                setSummaryText('summary-event', '로그 오류', 'summary-event-meta', '최근 이벤트를 불러오지 못함');
             }
         }
-        
+
         setInterval(fetchLogs, 2000);
-        window.onload = fetchLogs;
+        setInterval(fetchStatus, 2000);
+        window.onload = () => {
+            fetchLogs();
+            fetchStatus();
+        };
     </script>
 </body>
 </html>

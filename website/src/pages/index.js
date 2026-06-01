@@ -97,7 +97,7 @@ export default function Home() {
                 { title: "1. 접근 요청", desc: "사용자의 PIN 입력 또는 NFC 태그를 통해 인증 프로세스를 시작한다." },
                 { title: "2. 자격 검증", desc: "SQLite 데이터베이스 연동을 통해 1차 자격 증명의 유효성을 확인한다." },
                 { title: "3. 생체 인식", desc: "YOLOv8 비전 모듈이 실시간으로 얼굴 신원을 분석하여 본인 여부를 식별한다." },
-                { title: "4. 잠금 해제", desc: "모든 인증 단계를 통과한 경우에만 Arduino 릴레이에 개방 명령을 전송한다." }
+                { title: "4. 잠금 해제", desc: "모든 인증 단계를 통과한 경우에만 Arduino 서보에 OPEN_DOOR 명령을 전송한다." }
               ].map((item, i) => (
                 <div className="col col--3" key={i}>
                   <motion.div

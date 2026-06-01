@@ -10,10 +10,10 @@ sidebar_position: 2
 
 시스템을 가동하기 위해 다음 단계를 순차적으로 수행한다.
 
-1.  **전원 공급**: Arduino 및 잠금장치(Relay) 전용 전원 공급 장치가 연결되었는지 확인한다.
+1.  **전원 공급**: Arduino, 5V 전원 레일, 3.3V NFC 전원 레일, 공통 GND가 올바르게 연결되었는지 확인한다.
 2.  **Backend 실행**: 서버 환경에서 Python FastAPI 서버(`server/main.py`)를 시작한다. 시작 시 SQLite 데이터베이스가 자동으로 점검 및 초기화된다.
 3.  **Serial Handshake**: Arduino가 연결되면 `SYSTEM_READY` 신호를 Backend에 전송한다. Backend는 이 신호를 수신한 후 실시간 폴링 루프를 시작한다.
-4.  **Vision AI 로드**: YOLOv8 모델이 메모리에 로드된다. 로그에 카메라 프레임 캡처 성공 메시지가 출력되면 시스템이 정상 작동 상태로 진입한 것이다.
+4.  **Vision AI 모드 확인**: 실제 얼굴 인증은 `DOORLOCK_VISION_MOCK=false`로 실행한다. YOLO 모델이 준비되지 않은 시연에서는 `DOORLOCK_YOLO_ENABLED=false`로 고정한다.
 
 ## 인증 프로세스 (Authentication Flow)
 
@@ -21,18 +21,18 @@ sidebar_position: 2
 
 ### 1단계: 1차 인증 (NFC 또는 PIN)
 -   **NFC**: 등록된 카드를 MFRC522 리더기에 탭한다.
--   **PIN**: 키패드에서 4자리 비밀번호를 입력한 후 종료 키(예: `#`)를 누른다.
+-   **PIN**: TTP229 키패드에서 4자리 이상 숫자를 입력한다. 현재 8키 모드 펌웨어는 4자리 이상 입력 시 자동으로 PIN을 전송한다.
 -   1차 인증 정보가 데이터베이스와 일치하면 즉시 2단계 인증으로 전환된다.
 
 ### 2단계: 2차 인증 (얼굴 인식)
 -   카메라 렌즈를 정면으로 응시한다.
--   Vision AI 모듈이 사용자의 얼굴을 캡처하고, YOLOv8을 통해 추출된 특징점(Embeddings)을 등록된 프로필과 비교한다.
+-   Vision AI 모듈이 사용자의 얼굴을 캡처하고 등록된 얼굴 인코딩과 비교한다.
 -   임계값 이상의 유사도가 감지되면 인증이 승인된다.
 
 ### 3단계: 잠금 해제 (Unlock)
--   인증 성공 시 Backend가 Arduino로 `UNLOCK` 명령을 전송한다.
--   Arduino는 Relay를 활성화하여 설정된 시간(기본 3초) 동안 문을 연다.
--   시간이 경과하면 Relay가 차단되어 자동으로 다시 잠긴다.
+-   인증 성공 시 Backend가 Arduino로 `OPEN_DOOR` 명령을 전송한다.
+-   Arduino는 SG-90 서보를 열림 각도(`90도`)로 이동시킨다.
+-   시간이 경과하면 서보가 잠김 각도(`0도`)로 자동 복귀한다.
 
 ## 실패 처리 및 로깅 (Error Handling)
 
@@ -40,13 +40,14 @@ sidebar_position: 2
 
 | 구분 | 이벤트 로그 | 설명 |
 | :--- | :--- | :--- |
-| **1차 인증 실패** | `FAILURE_AUTH1` | 등록되지 않은 카드 또는 잘못된 PIN 입력 시 기록 |
-| **2차 인증 실패** | `FAILURE_AUTH2` | 얼굴 불일치, 다수 인원 감지, 또는 시간 초과 시 발생 |
-| **시스템 오류** | `SYSTEM_ERROR` | Serial 통신 단절, 카메라 인식 불가 등 하드웨어 결함 발생 시 기록 |
+| **1차 인증 성공** | `1ST_AUTH_SUCCESS` | 등록된 NFC 또는 PIN이 확인됨 |
+| **최종 인증 성공** | `FINAL_SUCCESS` | 1차 인증과 얼굴 인증이 모두 통과됨 |
+| **1차 인증 실패** | `UNAUTHORIZED` | 등록되지 않은 카드 또는 잘못된 PIN 입력 |
+| **2차 인증 실패** | `FINAL_FAIL` | 얼굴 불일치, 카메라 오류, 또는 얼굴 정보 없음 |
 
 ## 안전 및 주의사항 (Safety and Precautions)
 
--   **Fail-Secure 원칙**: 전원 차단, 시스템 오류 또는 통신 단절 시 Relay는 항상 '잠금' 상태를 유지하도록 설계되어 있다.
+-   **Fail-Secure 원칙**: 전원 차단, 시스템 오류 또는 통신 단절 시 서버가 `OPEN_DOOR`를 보내지 않으므로 서보는 잠금 상태를 유지한다.
 -   **조명 환경**: 얼굴 인식의 정확도는 조도에 영향을 받으므로, 너무 어둡거나 강한 역광이 있는 장소에서의 사용은 권장하지 않는다.
 -   **비상 개방**: 전자적 고장 상황을 대비하여 물리적 열쇠나 수동 개폐 장치를 별도로 구비해야 한다.
 
@@ -55,8 +56,9 @@ sidebar_position: 2
 물리적 하드웨어가 없는 환경에서는 다음과 같이 시뮬레이션할 수 있다.
 
 1.  Backend 서버를 실행한다.
-2.  `python3 server/mock_arduino.py`를 실행하여 가상의 Arduino 환경을 구축한다.
-3.  CLI 프롬프트를 통해 NFC UID 또는 PIN을 입력하여 전체 2FA 로직의 동작 여부를 검증한다.
+2.  `python3 server/fake_arduino.py`를 실행하여 가상의 Serial 장치를 만든다.
+3.  출력된 `/dev/pts/XX` 값을 `DOORLOCK_SERIAL_PORT`에 넣고 Backend를 실행한다.
+4.  CLI 메뉴를 통해 NFC UID 또는 PIN을 입력하여 전체 2FA 로직의 동작 여부를 검증한다.
 
 ## 운영 한계점 (Operational Limitations)
 

@@ -28,7 +28,16 @@ NFC/PIN 1차 인증과 YOLOv8 기반 얼굴 인식 2차 인증을 결합한 고�
 * [보안 취약점 분석](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/SECURITY_ANALYSIS)
 * [문제 해결 가이드](https://school-project-hwkim-dev.github.io/digital-logic-circuit/docs/TROUBLESHOOTING)
 
-## Getting Started (실행 방법)
+## 교수님 시연용 (가장 중요)
+
+```bash
+./demo.sh
+```
+
+브라우저에서 `http://localhost:8080` 접속
+상세 시연 시나리오는 [DEMO_GUIDE.md](./DEMO_GUIDE.md) 참고.
+
+## Getting Started (개발용)
 
 ```bash
 python3 -m venv .venv

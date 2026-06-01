@@ -2,6 +2,27 @@ import os
 from pathlib import Path
 
 
+# .env 파일이 있으면 환경변수로 읽어들인다.
+def _load_dotenv():
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key, value = key.strip(), value.strip()
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+_load_dotenv()
+
+
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 
@@ -41,12 +62,25 @@ def _list_env(name, default):
 
 
 DB_PATH = Path(os.getenv("DOORLOCK_DB_PATH", str(BASE_DIR / "doorlock.db"))).expanduser()
+DATABASE_URL = os.getenv("DOORLOCK_DATABASE_URL", "")
 WEB_HOST = os.getenv("DOORLOCK_WEB_HOST", "0.0.0.0")
 WEB_PORT = _int_env("DOORLOCK_WEB_PORT", 8000)
 LEGACY_FLASK_PORT = _int_env("DOORLOCK_LEGACY_FLASK_PORT", 5000)
 FLASK_DEBUG = _bool_env("DOORLOCK_FLASK_DEBUG", False)
-SERIAL_PORT = os.getenv("DOORLOCK_SERIAL_PORT", "/dev/ttyACM0")
+CAMERA_URL = os.getenv("DOORLOCK_CAMERA_URL", "0") # "0" 은 기본 웹캠, IP 카메라면 "http://192.168.x.x:81/stream" 등 입력
+def _detect_serial_port():
+    """기본은 자동 탐지다. 명시 포트가 필요할 때만 DOORLOCK_SERIAL_PORT를 쓴다."""
+    env_val = os.getenv("DOORLOCK_SERIAL_PORT")
+    if env_val:
+        return env_val
+    return "auto"
+
+
+SERIAL_PORT = _detect_serial_port()
 BAUD_RATE = _int_env("DOORLOCK_BAUD_RATE", 9600)
+ESP32CAM_BAUD_RATE = _int_env("DOORLOCK_ESP32CAM_BAUD_RATE", 921600)
+ESP32CAM_READ_TIMEOUT_SECONDS = _float_env("DOORLOCK_ESP32CAM_READ_TIMEOUT_SECONDS", 4.0)
+ESP32CAM_BOOT_WAIT_SECONDS = _float_env("DOORLOCK_ESP32CAM_BOOT_WAIT_SECONDS", 1.5)
 SERIAL_RECONNECT_INTERVAL_SECONDS = _float_env("DOORLOCK_SERIAL_RECONNECT_INTERVAL_SECONDS", 5.0)
 DISCORD_WEBHOOK_URL = os.getenv("DOORLOCK_DISCORD_WEBHOOK_URL", "")
 NOTIFIER_TIMEOUT_SECONDS = _float_env("DOORLOCK_NOTIFIER_TIMEOUT_SECONDS", 5.0)
@@ -57,8 +91,10 @@ LOCKDOWN_ALERT_COOLDOWN_SECONDS = _float_env("DOORLOCK_LOCKDOWN_ALERT_COOLDOWN_S
 DB_BACKUP_INTERVAL_SECONDS = _float_env("DOORLOCK_DB_BACKUP_INTERVAL_SECONDS", 3600.0)
 
 VISION_MOCK = _bool_env("DOORLOCK_VISION_MOCK", False)
+MOCK_FACE_IDENTITY = os.getenv("DOORLOCK_MOCK_FACE_IDENTITY", "demo-person")
 ALLOW_UNENROLLED_FACE = _bool_env("DOORLOCK_ALLOW_UNENROLLED_FACE", False)
 FACE_MATCH_TOLERANCE = _float_env("DOORLOCK_FACE_TOLERANCE", 0.6)
+FACE_LIVENESS_REQUIRED = _bool_env("DOORLOCK_FACE_LIVENESS_REQUIRED", True)
 
 YOLO_ENABLED = _bool_env("DOORLOCK_YOLO_ENABLED", True)
 YOLO_MODEL_PATH = Path(

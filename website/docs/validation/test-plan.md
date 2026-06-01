@@ -11,10 +11,10 @@ sidebar_position: 1
 시스템 검증은 하드웨어와 소프트웨어가 통합된 실제 실험 환경 및 CI(Continuous Integration) 기반의 가상 환경에서 병행되었다.
 
 ### 1.1 하드웨어 구성
-- **Microcontroller**: Arduino Uno (Atmega328P)
-- **Primary Auth**: RC522 NFC Reader, 4x4 Matrix Keypad
+- **Microcontroller**: Arduino UNO R4 WiFi
+- **Primary Auth**: RC522/MFRC522 NFC Reader, TTP229 터치 키패드
 - **Secondary Auth**: USB 웹캠 (Standard 1080p)
-- **Output**: 5V 릴레이 모듈, 전자기 잠금장치 (Solenoid Lock)
+- **Output**: SG-90 서보모터, FQ-030 수동 부저
 
 ### 1.2 소프트웨어 구성
 - **OS**: Ubuntu 22.04 LTS / macOS
@@ -28,16 +28,19 @@ sidebar_position: 1
 
 ```bash
 # 단위 테스트 실행 명령어
-python3 -B -m unittest discover -s server -p 'test*.py'
+python3 run_tests.py
+# 또는
+python3 -B -m unittest discover -s tests -t . -p 'test*.py'
 ```
 
 | 테스트 모듈 | 검증 내용 |
 |---|---|
 | `test_validation.py` | NFC UID 정규화 형식 및 PIN 번호 해싱(Bcrypt) 로직 검증 |
-| `test_database.py` | SQLite WAL 모드 설정, 외래 키 제약 조건 및 데이터 무결성 검증 |
+| `test_database_backup.py`, `test_database_security_deep.py` | SQLite WAL 모드, 백업, 권한, 외래 키 로그 보존 및 데이터 무결성 검증 |
 | `test_vision_yolo.py` | 얼굴 감지 임계값 처리 및 임베딩 비교 로직의 정확성 검증 |
 | `test_notifier.py` | 보안 이벤트 발생 시 Discord Webhook 알림 전송 로직 검증 |
 | `test_security_redaction.py` | 로그 및 터미널 출력 시 민감 정보(PIN, UID 일부) 마스킹 처리 검증 |
+| `test_end_to_end_scenarios.py` | 웹 GUI 렌더링, 얼굴 캡처, 사용자 등록, 인증, 로그, 수동 제어 흐름 검증 |
 
 ## 3. 시스템 통합 테스트 (System Integration Testing)
 
@@ -45,8 +48,8 @@ python3 -B -m unittest discover -s server -p 'test*.py'
 
 | ID | 시나리오 | 테스트 절차 | 예상 결과 | 결과 |
 |---|---|---|---|---|
-| **ST-01** | 정상 인증 (NFC) | 등록된 NFC 카드 태그 → 등록된 사용자 얼굴 제시 | 잠금 해제 (릴레이 3s 활성화) 및 성공 로그 기록 | 통과 |
-| **ST-02** | 정상 인증 (PIN) | 등록된 PIN 번호 입력 → 등록된 사용자 얼굴 제시 | 잠금 해제 (릴레이 3s 활성화) 및 성공 로그 기록 | 통과 |
+| **ST-01** | 정상 인증 (NFC) | 등록된 NFC 카드 태그 → 등록된 사용자 얼굴 제시 | `OPEN_DOOR` 전송, 서보 3s 열림 및 성공 로그 기록 | 통과 |
+| **ST-02** | 정상 인증 (PIN) | 등록된 PIN 번호 입력 → 등록된 사용자 얼굴 제시 | `OPEN_DOOR` 전송, 서보 3s 열림 및 성공 로그 기록 | 통과 |
 | **ST-03** | 1차 인증 실패 | 등록되지 않은 NFC 카드 또는 잘못된 PIN 입력 | 즉시 거부, 경고 문구 출력 및 카메라 미작동 | 통과 |
 | **ST-04** | 2차 인증 실패 | 유효한 1차 인증 완료 → 미등록 사용자 얼굴 제시 | 접근 거부, 보안 경고 알림 전송 및 로그 기록 | 통과 |
 | **ST-05** | 인증 시간 초과 | 1차 인증 후 2차 인증(얼굴) 없이 대기 | 일정 시간 후 세션 종료 및 초기 상태 전환 | 통과 |
@@ -61,4 +64,4 @@ python3 -B -m unittest discover -s server -p 'test*.py'
 - **실시간 모니터링**: 관리자 대시보드를 통해 실시간으로 접근 기록과 카메라 피드가 지연 없이 전송되는지 확인했다.
 
 ---
-*참고: 물리적 하드웨어 장치가 없는 환경(CI/CD 등)에서는 `mock_arduino.py`를 활용하여 시리얼 통신 프로토콜을 시뮬레이션함으로써 로직의 정교함을 검증한다.*
+*참고: 물리적 하드웨어 장치가 없는 환경(CI/CD 등)에서는 `server/fake_arduino.py`를 활용하여 PTY 기반 시리얼 통신 프로토콜을 시뮬레이션한다.*

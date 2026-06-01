@@ -27,8 +27,10 @@ Arduino는 하드웨어 인터럽트 및 사용자 입력을 감지하여 서버
 | 시스템 준비 | `SYSTEM_READY` | Arduino 부팅 및 초기화 완료 시 송신 |
 | NFC 태그 감지 | `WAKEUP:NFC:[UID]` | 감지된 NFC 카드의 고유 식별자(HEX) 전송 |
 | 비밀번호 입력 | `WAKEUP:PW:[PIN]` | 키패드로 입력된 비밀번호 문자열 전송 |
-| 도어 개방 완료 | `DOOR_OPENED` | 릴레이 활성화를 통한 잠금 해제 상태 보고 |
-| 도어 폐쇄 완료 | `DOOR_CLOSED` | 설정된 시간이 경과하여 잠금 상태로 복귀 보고 |
+| 도어 개방 완료 | `DOOR_OPENED` | 서보가 열림 각도로 이동한 뒤 상태 보고 |
+| 도어 폐쇄 완료 | `DOOR_CLOSED` | 설정된 시간이 경과하여 서보가 잠김 각도로 복귀한 뒤 상태 보고 |
+| 식별 응답 | `PONG:DOORLOCK_ARDUINO` | 서버가 `PING`을 보냈을 때 Arduino 포트임을 확인 |
+| 상태 응답 | `STATUS:OPEN` 또는 `STATUS:LOCKED` | 서버가 `STATUS`를 보냈을 때 현재 도어 상태 보고 |
 
 ### 2. 백엔드 서버 → Arduino (제어 명령)
 
@@ -36,7 +38,30 @@ Arduino는 하드웨어 인터럽트 및 사용자 입력을 감지하여 서버
 
 | 명령 | 메시지 형식 | 동작 |
 | :--- | :--- | :--- |
-| 잠금 해제 | `OPEN_DOOR` | 릴레이를 활성화하여 물리적 잠금을 해제함 |
+| 잠금 해제 | `OPEN_DOOR` | SG-90 서보를 열림 각도로 이동 |
+| 인증 실패 | `AUTH_FAIL` | 부저 실패음을 재생 |
+| 보안 잠금 | `LOCKDOWN` | 부저 경고음을 재생하고 입력 차단 상태를 표시 |
+| 포트 식별 | `PING` | Arduino가 `PONG:DOORLOCK_ARDUINO`로 응답 |
+| 상태 요청 | `STATUS` | Arduino가 `STATUS:OPEN` 또는 `STATUS:LOCKED`로 응답 |
+
+## ESP32-CAM USB-Serial JPEG 프로토콜
+
+ESP32-CAM + CH340 USB-C 보드는 일반 USB 웹캠이 아니므로 별도 Serial JPEG 프로토콜을 사용한다. 이 경로는 Arduino 도어락 제어 Serial과 다른 포트이며, 기본 설정은 다음과 같다.
+
+- **Baud Rate**: 921600 bps
+- **Python 설정**: `DOORLOCK_CAMERA_URL=serial:auto`
+- **ESP32-CAM 펌웨어**: `esp32cam/serial_camera/serial_camera.ino`
+
+| 방향 | 메시지 | 설명 |
+| :--- | :--- | :--- |
+| 서버 → ESP32-CAM | `PING` | ESP32-CAM 포트 식별 |
+| ESP32-CAM → 서버 | `PONG:READY` | ESP32-CAM 펌웨어와 카메라 초기화 완료 |
+| ESP32-CAM → 서버 | `PONG:NOT_READY` | ESP32-CAM 펌웨어는 응답했지만 카메라 초기화 실패 또는 미준비 |
+| 서버 → ESP32-CAM | `CAPTURE` | JPEG 프레임 1장 요청 |
+| ESP32-CAM → 서버 | `JPEG:<length>` + JPEG bytes + `END` | JPEG 바이트 길이와 실제 프레임 데이터 |
+| ESP32-CAM → 서버 | `ERR:<reason>` | 캡처 실패 또는 카메라 미준비 |
+
+서버는 Arduino 포트와 ESP32-CAM 포트를 모두 자동 스캔하지만 응답 문자열이 다르므로 서로 구분한다. Arduino는 `PONG:DOORLOCK_ARDUINO`, ESP32-CAM은 `PONG:READY` 또는 `PONG:NOT_READY`를 사용한다.
 
 ## 통신 흐름 예시 (Sequence Example)
 
@@ -44,7 +69,7 @@ Arduino는 하드웨어 인터럽트 및 사용자 입력을 감지하여 서버
 2.  **1차 인증 요청**: 사용자가 NFC 태그 → `WAKEUP:NFC:A1B2C3D4` 송신
 3.  **서버 판단**: 서버에서 NFC 일치 여부 확인 후 얼굴 인식(2차 인증) 수행
 4.  **제어 명령**: 인증 성공 시 서버에서 `OPEN_DOOR` 송신
-5.  **상태 피드백**: Arduino 릴레이 작동 → `DOOR_OPENED` 송신 → 3초 후 `DOOR_CLOSED` 송신
+5.  **상태 피드백**: Arduino 서보 열림 → `DOOR_OPENED` 송신 → 3초 후 `DOOR_CLOSED` 송신
 
 ## 보안 및 설계 고려사항
 

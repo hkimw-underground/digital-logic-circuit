@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -75,7 +76,11 @@ class Database:
                     username TEXT NOT NULL,
                     nfc_uid TEXT UNIQUE,
                     password TEXT,
-                    face_encoding BLOB
+                    face_encoding BLOB,
+                    email TEXT,
+                    phone TEXT,
+                    address TEXT,
+                    member_uuid TEXT UNIQUE
                 )
             ''')
             cursor.execute('''
@@ -108,6 +113,48 @@ class Database:
             cursor.execute("ALTER TABLE users ADD COLUMN password TEXT")
         if "face_encoding" not in columns:
             cursor.execute("ALTER TABLE users ADD COLUMN face_encoding BLOB")
+        if "email" not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        if "phone" not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN phone TEXT")
+        if "address" not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN address TEXT")
+        if "member_uuid" not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN member_uuid TEXT")
+        self._ensure_member_profiles()
+
+    def _ensure_member_profiles(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id, username, nfc_uid, email, phone, address, member_uuid FROM users")
+        for row in cursor.fetchall():
+            defaults = self._default_member_profile(row["id"], row["username"], row["nfc_uid"])
+            email = row["email"] or defaults["email"]
+            phone = row["phone"] or defaults["phone"]
+            address = row["address"] or defaults["address"]
+            member_uuid = row["member_uuid"] or str(uuid.uuid4())
+            cursor.execute(
+                """
+                UPDATE users
+                SET email = ?, phone = ?, address = ?, member_uuid = ?
+                WHERE id = ?
+                """,
+                (email, phone, address, member_uuid, row["id"]),
+            )
+
+    def _default_member_profile(self, user_id, username, nfc_uid=None):
+        demo_profiles = {
+            "김민준": ("minjun.kim@school.local", "010-2314-0001", "서울시 강남구 디지털로 12, 실습실 A-201"),
+            "이서연": ("seoyeon.lee@school.local", "010-2314-0002", "서울시 강남구 디지털로 12, 실습실 A-202"),
+            "박도윤": ("doyoon.park@school.local", "010-2314-0003", "서울시 강남구 디지털로 12, 실습실 A-203"),
+        }
+        if username in demo_profiles:
+            email, phone, address = demo_profiles[username]
+        else:
+            safe_id = int(user_id or 0)
+            email = f"user{safe_id:03d}@doorlock.local"
+            phone = f"010-0000-{safe_id:04d}"[-13:]
+            address = "학교 디지털논리회로 실습실"
+        return {"email": email, "phone": phone, "address": address}
 
     def _migrate_logs_table(self):
         columns = self._columns("access_logs")
@@ -119,7 +166,7 @@ class Database:
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_access_logs_status_id ON access_logs(status, id)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_access_logs_timestamp ON access_logs(timestamp)")
 
-    def add_user(self, username, nfc_uid=None, password=None, face_encoding=None):
+    def add_user(self, username, nfc_uid=None, password=None, face_encoding=None, email=None, phone=None, address=None):
         try:
             self._ensure_open()
             nfc_uid = normalize_nfc_uid(nfc_uid)
@@ -131,8 +178,12 @@ class Database:
             with self.lock:
                 cursor = self.conn.cursor()
                 cursor.execute(
-                    "INSERT INTO users (username, nfc_uid, password, face_encoding) VALUES (?, ?, ?, ?)",
-                    (username, nfc_uid, hashed_password, face_encoding),
+                    """
+                    INSERT INTO users
+                        (username, nfc_uid, password, face_encoding, email, phone, address, member_uuid)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (username, nfc_uid, hashed_password, face_encoding, email, phone, address, str(uuid.uuid4())),
                 )
                 self.conn.commit()
                 self._secure_file_permissions()
@@ -187,8 +238,40 @@ class Database:
         self._ensure_open()
         with self.lock:
             cursor = self.conn.cursor()
-            cursor.execute('SELECT id, username, nfc_uid FROM users')
+            cursor.execute('''
+                SELECT id, username, nfc_uid, email, phone, address, member_uuid,
+                       CASE WHEN face_encoding IS NOT NULL THEN 1 ELSE 0 END AS face_enrolled
+                FROM users
+                ORDER BY id ASC
+            ''')
             return cursor.fetchall()
+
+    def get_user(self, user_id):
+        self._ensure_open()
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, username, nfc_uid, email, phone, address, member_uuid,
+                       CASE WHEN face_encoding IS NOT NULL THEN 1 ELSE 0 END AS face_enrolled
+                FROM users
+                WHERE id = ?
+                """,
+                (user_id,),
+            )
+            row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row["id"],
+            "username": row["username"],
+            "nfc_uid": row["nfc_uid"],
+            "email": row["email"],
+            "phone": row["phone"],
+            "address": row["address"],
+            "member_uuid": row["member_uuid"],
+            "face_enrolled": bool(row["face_enrolled"]),
+        }
 
     def delete_user(self, user_id):
         try:
@@ -213,8 +296,23 @@ class Database:
                                (user_id, datetime.now().isoformat(timespec="seconds"), method, status, snapshot))
                 self.conn.commit()
                 self._secure_file_permissions()
+                return cursor.lastrowid
         except sqlite3.OperationalError as e:
             print(f"[DB Log Error] {e}")
+        return None
+
+    def _log_rows_to_dicts(self, rows):
+        return [
+            {
+                "id": row["id"],
+                "timestamp": row["timestamp"],
+                "username": row["username"],
+                "method": row["method"],
+                "status": row["status"],
+                "has_snapshot": bool(row["has_snapshot"]),
+            }
+            for row in rows
+        ]
 
     def get_recent_logs(self, limit=20):
         self._ensure_open()
@@ -230,17 +328,133 @@ class Database:
                 ORDER BY l.id DESC
                 LIMIT ?
             ''', (limit,))
-            return [
-                {
-                    "id": row["id"],
-                    "timestamp": row["timestamp"],
-                    "username": row["username"],
-                    "method": row["method"],
-                    "status": row["status"],
-                    "has_snapshot": bool(row["has_snapshot"]),
-                }
-                for row in cursor.fetchall()
-            ]
+            return self._log_rows_to_dicts(cursor.fetchall())
+
+    def get_logs(self, limit=100, offset=0):
+        self._ensure_open()
+        limit = self._bounded_limit(limit, default=100, maximum=500)
+        try:
+            offset = max(int(offset), 0)
+        except (TypeError, ValueError):
+            offset = 0
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT l.id, l.timestamp, COALESCE(u.username, 'Unknown') AS username,
+                       l.method, l.status,
+                       CASE WHEN l.snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                FROM access_logs l
+                LEFT JOIN users u ON l.user_id = u.id
+                ORDER BY l.id DESC
+                LIMIT ? OFFSET ?
+            ''', (limit, offset))
+            logs = self._log_rows_to_dicts(cursor.fetchall())
+            cursor.execute("SELECT COUNT(*) AS count FROM access_logs")
+            total = cursor.fetchone()["count"]
+        return {"logs": logs, "total": total, "limit": limit, "offset": offset}
+
+    def get_user_logs(self, user_id, limit=50):
+        self._ensure_open()
+        limit = self._bounded_limit(limit, default=50, maximum=300)
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT l.id, l.timestamp, COALESCE(u.username, 'Unknown') AS username,
+                       l.method, l.status,
+                       CASE WHEN l.snapshot IS NOT NULL THEN 1 ELSE 0 END AS has_snapshot
+                FROM access_logs l
+                LEFT JOIN users u ON l.user_id = u.id
+                WHERE l.user_id = ?
+                ORDER BY l.id DESC
+                LIMIT ?
+            ''', (user_id, limit))
+            return self._log_rows_to_dicts(cursor.fetchall())
+
+    def get_user_activity(self, user_id, limit=50):
+        self._ensure_open()
+        user = self.get_user(user_id)
+        if not user:
+            return None
+
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    COUNT(*) AS total_events,
+                    SUM(CASE WHEN status = 'FINAL_SUCCESS' THEN 1 ELSE 0 END) AS successful_entries,
+                    SUM(CASE WHEN status IN ('UNAUTHORIZED', 'FINAL_FAIL') THEN 1 ELSE 0 END) AS failed_events,
+                    MAX(CASE WHEN status = 'FINAL_SUCCESS' THEN timestamp ELSE NULL END) AS last_entry_at,
+                    MAX(timestamp) AS last_event_at
+                FROM access_logs
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            )
+            stats = dict(cursor.fetchone())
+        user["stats"] = {
+            "total_events": int(stats.get("total_events") or 0),
+            "successful_entries": int(stats.get("successful_entries") or 0),
+            "failed_events": int(stats.get("failed_events") or 0),
+            "last_entry_at": stats.get("last_entry_at"),
+            "last_event_at": stats.get("last_event_at"),
+        }
+        user["logs"] = self.get_user_logs(user_id, limit=limit)
+        return user
+
+    def seed_demo_data(self):
+        demo_users = [
+            ("김민준", "A1B2C3D4", "1234", "minjun.kim@school.local", "010-2314-0001", "서울시 강남구 디지털로 12, 실습실 A-201"),
+            ("이서연", "B2C3D4E5", "2468", "seoyeon.lee@school.local", "010-2314-0002", "서울시 강남구 디지털로 12, 실습실 A-202"),
+            ("박도윤", "C3D4E5F6", "1357", "doyoon.park@school.local", "010-2314-0003", "서울시 강남구 디지털로 12, 실습실 A-203"),
+        ]
+        with self.lock:
+            cursor = self.conn.cursor()
+            user_ids = []
+            for username, nfc_uid, password, email, phone, address in demo_users:
+                cursor.execute("SELECT id FROM users WHERE nfc_uid = ?", (nfc_uid,))
+                row = cursor.fetchone()
+                if row:
+                    cursor.execute(
+                        """
+                        UPDATE users
+                        SET email = COALESCE(email, ?),
+                            phone = COALESCE(phone, ?),
+                            address = COALESCE(address, ?),
+                            member_uuid = COALESCE(member_uuid, ?)
+                        WHERE id = ?
+                        """,
+                        (email, phone, address, str(uuid.uuid4()), row["id"]),
+                    )
+                    user_ids.append(row["id"])
+                    continue
+                user_id = self.add_user(
+                    username,
+                    nfc_uid=nfc_uid,
+                    password=password,
+                    email=email,
+                    phone=phone,
+                    address=address,
+                )
+                user_ids.append(user_id)
+
+            sample_events_by_user = {
+                user_ids[0]: [("NFC", "1ST_AUTH_SUCCESS"), ("NFC", "FINAL_SUCCESS")],
+                user_ids[1]: [("PASSWORD", "1ST_AUTH_SUCCESS"), ("PASSWORD", "FINAL_SUCCESS")],
+                user_ids[2]: [("NFC", "1ST_AUTH_SUCCESS"), ("NFC", "FINAL_FAIL")],
+            }
+            for user_id, events in sample_events_by_user.items():
+                cursor.execute("SELECT COUNT(*) AS count FROM access_logs WHERE user_id = ?", (user_id,))
+                if cursor.fetchone()["count"] > 0:
+                    continue
+                for method, status in events:
+                    self.log_access(user_id, method, status)
+
+            cursor.execute("SELECT COUNT(*) AS count FROM access_logs WHERE user_id IS NULL")
+            if cursor.fetchone()["count"] == 0:
+                self.log_access(None, "PW", "UNAUTHORIZED")
+
+        return [self.get_user_activity(user_id, limit=10) for user_id in user_ids if user_id]
 
     def get_recent_statuses(self, limit=3):
         self._ensure_open()

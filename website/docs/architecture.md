@@ -30,7 +30,7 @@ sidebar_position: 4
 
     {/* Lock */}
     <rect x="50" y="300" width="150" height="50" rx="8" fill="#ffffff" stroke="#e11d48" strokeWidth="2" />
-    <text x="125" y="330" textAnchor="middle" fill="#0f172a" fontWeight="bold">릴레이 / 도어락</text>
+    <text x="125" y="330" textAnchor="middle" fill="#0f172a" fontWeight="bold">서보 / 도어락</text>
 
     {/* 백엔드 레이어 */}
     <rect x="325" y="180" width="150" height="80" rx="8" fill="#ffffff" stroke="#1e3a8a" strokeWidth="2" />
@@ -68,7 +68,7 @@ sidebar_position: 4
 
 | 모듈 | 역할 및 책임 | 주요 기술 |
 |---|---|---|
-| **마이크로컨트롤러** | NFC 및 키패드 하드웨어 상태를 폴링(Polling)하고, 원시 입력을 Serial 통신으로 백엔드에 전달한다. 서버의 명령에 따라 릴레이를 제어한다. | Arduino Uno/Nano, C++ |
+| **마이크로컨트롤러** | NFC 및 키패드 하드웨어 상태를 폴링(Polling)하고, 원시 입력을 Serial 통신으로 백엔드에 전달한다. 서버의 명령에 따라 서보와 부저를 제어한다. | Arduino UNO R4 WiFi, C++ |
 | **백엔드 API** | 전체 인증 흐름을 제어한다. 1차 인증(NFC/PIN) 확인 후 Vision 모듈을 호출하며, 최종 승인 시 Arduino에 잠금 해제 명령을 전송한다. | Python, FastAPI, PySerial |
 | **Vision 모듈** | 카메라로부터 프레임을 캡처하여 얼굴을 탐지하고, 등록된 사용자 프로필과 비교하여 2차 인증을 수행한다. YOLOv8 모델을 사용하여 실시간 추론을 수행한다. | OpenCV, YOLOv8 |
 | **데이터베이스** | 사용자 자격 증명(해싱된 PIN, NFC UID) 및 수정 불가능한(Immutable) 출입 로그를 안전하게 저장한다. | SQLite |
@@ -83,8 +83,8 @@ sidebar_position: 4
 
 **제어 흐름 (Control Flow):**
 1. **중앙 집중식 의사결정**: Arduino는 독자적인 출입 결정 권한이 없으며, 모든 결정은 백엔드 서버에서 수행된다.
-2. **명령 하사**: 모든 인증 단계가 통과된 경우에만 백엔드에서 `UNLOCK` Serial 명령을 Arduino에 전송한다.
-3. **하드웨어 실행**: Arduino는 수신된 명령에 따라 물리적 릴레이 스위치를 작동시킨다. 이는 소프트웨어 장애 시에도 잠금 상태를 유지하는 Fail-Secure 설계를 보장한다.
+2. **명령 하사**: 모든 인증 단계가 통과된 경우에만 백엔드에서 `OPEN_DOOR` Serial 명령을 Arduino에 전송한다.
+3. **하드웨어 실행**: Arduino는 수신된 명령에 따라 SG-90 서보를 열림 각도로 이동시킨다. 이는 소프트웨어 장애 시에도 잠금 상태를 유지하는 Fail-Secure 설계를 보장한다.
 
 ## 데이터 흐름도 (Data Flow Diagram)
 
@@ -111,7 +111,7 @@ sidebar_position: 4
 
     {/* 역방향 흐름 */}
     <path d="M 300 110 L 150 110" stroke="#1e3a8a" strokeWidth="2" fill="none" markerEnd="url(#df-arrow)" />
-    <text x="225" y="125" textAnchor="middle" fill="#334155" fontSize="10">UNLOCK 명령</text>
+    <text x="225" y="125" textAnchor="middle" fill="#334155" fontSize="10">OPEN_DOOR 명령</text>
 
     {/* 로그 흐름 */}
     <path d="M 400 100 L 550 100" stroke="#1e3a8a" strokeWidth="2" fill="none" markerEnd="url(#df-arrow)" />
