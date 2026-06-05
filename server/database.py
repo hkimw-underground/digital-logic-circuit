@@ -199,6 +199,18 @@ class Database:
             result = cursor.fetchone()
         return result["face_encoding"] if result else None
 
+    def update_face_encoding(self, user_id, face_encoding):
+        self._ensure_open()
+        with self.lock:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                "UPDATE users SET face_encoding = ? WHERE id = ?",
+                (face_encoding, user_id),
+            )
+            self.conn.commit()
+            self._secure_file_permissions()
+            return cursor.rowcount > 0
+
     def verify_nfc(self, uid):
         self._ensure_open()
         uid = normalize_nfc_uid(uid)

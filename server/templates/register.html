@@ -48,7 +48,7 @@
                         <span class="status-badge bg-secondary">얼굴</span>
                     </div>
                     <div class="feed-shell">
-                        <img src="/video_feed" class="camera-preview" alt="카메라 화면">
+                        <img data-src="/video_feed" class="camera-preview" alt="카메라 화면">
                     </div>
                     <button id="btnCapture" class="capture-button" type="button">
                         <span class="material-symbols-rounded me-2" aria-hidden="true">photo_camera</span>얼굴 정보 캡처
@@ -84,12 +84,17 @@
                         </div>
                         <div>
                             <label for="nfc_uid" class="form-label">NFC UID (HEX)</label>
-                            <input type="text" id="nfc_uid" class="form-control" placeholder="A1B2C3D4" pattern="[0-9A-Fa-f]{4,32}" maxlength="32" autocomplete="off" required>
-                            <div class="form-help">MFRC522에서 읽은 UID를 HEX 형식으로 입력</div>
+                            <div class="input-group">
+                                <input type="text" id="nfc_uid" class="form-control" placeholder="A1B2C3D4" pattern="[0-9A-Fa-f]{4,32}" maxlength="32" autocomplete="off" required>
+                                <button id="btnNfcCapture" class="btn btn-outline-secondary" type="button">
+                                    <span class="material-symbols-rounded me-1" aria-hidden="true">contactless</span>NFC 태그
+                                </button>
+                            </div>
+                            <div id="nfcCaptureMsg" class="form-help" aria-live="polite">MFRC522에서 읽은 UID를 HEX 형식으로 입력</div>
                         </div>
                         <div>
-                            <label for="password" class="form-label">PIN (숫자 4~8자리)</label>
-                            <input type="password" id="password" class="form-control" placeholder="12345678" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="new-password" required>
+                            <label for="password" class="form-label">PIN (숫자 4자리)</label>
+                            <input type="password" id="password" class="form-control" placeholder="1234" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="new-password" required>
                         </div>
 
                         <button type="submit" id="btnSubmit" class="submit-button">
@@ -106,6 +111,33 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let faceCaptured = false;
+        let nfcCapturePoll = null;
+        let nfcCountdown = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            setupCameraFeed('.camera-preview');
+        });
+
+        function setupCameraFeed(selector) {
+            const img = document.querySelector(selector);
+            if (!img) return;
+            const streamUrl = img.dataset.src || '/video_feed';
+            const start = () => {
+                if (!document.hidden && !img.getAttribute('src')) {
+                    img.src = `${streamUrl}?t=${Date.now()}`;
+                }
+            };
+            const stop = () => {
+                img.removeAttribute('src');
+            };
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) stop();
+                else start();
+            });
+            window.addEventListener('pagehide', stop);
+            window.addEventListener('beforeunload', stop);
+            start();
+        }
 
         const escapeHtml = (value) => {
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
@@ -146,11 +178,78 @@
             }
         };
 
+        function stopNfcCaptureTimers() {
+            if (nfcCapturePoll) clearInterval(nfcCapturePoll);
+            if (nfcCountdown) clearInterval(nfcCountdown);
+            nfcCapturePoll = null;
+            nfcCountdown = null;
+        }
+
+        function setNfcCaptureMessage(text, ok = null) {
+            const msg = document.getElementById('nfcCaptureMsg');
+            msg.textContent = text;
+            if (ok === true) msg.style.color = '#15803d';
+            else if (ok === false) msg.style.color = '#b91c1c';
+            else msg.style.color = '';
+        }
+
+        document.getElementById('btnNfcCapture').onclick = async () => {
+            const btn = document.getElementById('btnNfcCapture');
+            stopNfcCaptureTimers();
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>15초';
+
+            try {
+                const start = await fetch('/api/nfc_capture/start', { method: 'POST' });
+                const started = await start.json();
+                if (!started.success) throw new Error(started.message || 'NFC capture failed');
+
+                let remaining = Number(started.capture?.remaining_seconds || 15);
+                setNfcCaptureMessage(`NFC 태그 대기 중... ${remaining}초`, null);
+                nfcCountdown = setInterval(() => {
+                    remaining = Math.max(0, remaining - 1);
+                    btn.innerHTML = `<span class="material-symbols-rounded me-1" aria-hidden="true">timer</span>${remaining}초`;
+                    setNfcCaptureMessage(`NFC 태그 대기 중... ${remaining}초`, null);
+                    if (remaining <= 0) {
+                        stopNfcCaptureTimers();
+                        btn.disabled = false;
+                        btn.innerHTML = '<span class="material-symbols-rounded me-1" aria-hidden="true">contactless</span>NFC 태그';
+                        setNfcCaptureMessage('NFC 태그를 읽지 못했습니다.', false);
+                    }
+                }, 1000);
+
+                nfcCapturePoll = setInterval(async () => {
+                    const res = await fetch('/api/nfc_capture/status');
+                    const data = await res.json();
+                    const capture = data.capture || {};
+                    if (capture.uid) {
+                        document.getElementById('nfc_uid').value = String(capture.uid).toUpperCase();
+                        stopNfcCaptureTimers();
+                        btn.disabled = false;
+                        btn.innerHTML = '<span class="material-symbols-rounded me-1" aria-hidden="true">contactless</span>NFC 태그';
+                        setNfcCaptureMessage(`NFC UID ${capture.uid} 읽음`, true);
+                    } else if (!capture.active && Number(capture.remaining_seconds || 0) <= 0) {
+                        stopNfcCaptureTimers();
+                        btn.disabled = false;
+                        btn.innerHTML = '<span class="material-symbols-rounded me-1" aria-hidden="true">contactless</span>NFC 태그';
+                        setNfcCaptureMessage('NFC 태그를 읽지 못했습니다.', false);
+                    }
+                }, 800);
+            } catch (e) {
+                stopNfcCaptureTimers();
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-rounded me-1" aria-hidden="true">contactless</span>NFC 태그';
+                setNfcCaptureMessage('NFC 캡처를 시작하지 못했습니다.', false);
+            }
+        };
+
         document.getElementById('regForm').onsubmit = async (e) => {
             e.preventDefault();
             const msg = document.getElementById('msg');
             if (!faceCaptured) {
-                if (!confirm('얼굴 정보가 아직 캡처되지 않았습니다. 2차 인증 정보 없이 등록할까요?')) return;
+                setStatus(document.getElementById('captureMsg'), false, '얼굴 정보 캡처 후 등록하세요.');
+                setMessage(msg, false, '얼굴 정보 캡처 후 등록하세요.');
+                return;
             }
 
             const btn = document.getElementById('btnSubmit');

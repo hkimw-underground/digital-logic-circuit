@@ -82,6 +82,22 @@ class TestWebApiDeep(unittest.TestCase):
             "last_probe_at": 123.0,
         }
         self.mock_doorlock_server.reconnect_serial.return_value = True
+        self.mock_doorlock_server.start_nfc_capture.return_value = {
+            "active": True,
+            "uid": None,
+            "started_at": 123.0,
+            "expires_at": 138.0,
+            "captured_at": None,
+            "remaining_seconds": 15,
+        }
+        self.mock_doorlock_server.get_nfc_capture_status.return_value = {
+            "active": False,
+            "uid": "A1B2C3D4",
+            "started_at": 123.0,
+            "expires_at": 138.0,
+            "captured_at": 125.0,
+            "remaining_seconds": 0,
+        }
         self.server.configure_services(
             database=self.db,
             vision_ai=self.mock_vision,
@@ -108,7 +124,9 @@ class TestWebApiDeep(unittest.TestCase):
             if os.path.exists(path):
                 os.remove(path)
 
-    def _post_register(self, name, nfc_uid, password):
+    def _post_register(self, name, nfc_uid, password, capture_face=True):
+        if capture_face:
+            self.client.post("/api/capture_face")
         payload = {"name": name, "nfc_uid": nfc_uid, "password": password}
         return self.client.post("/api/register", json=payload)
 
@@ -124,6 +142,30 @@ class TestWebApiDeep(unittest.TestCase):
         response = self._post_register(name="Another", nfc_uid="A1B2C3D4", password="5678")
         self.assertEqual(response.status_code, 409)
         self.assertFalse(response.json()["success"])
+
+    def test_register_duplicate_pin_conflict_returns_409(self):
+        self.assertIsNotNone(self.db.add_user("Existing", "A1B2C3D4", "1234"))
+        response = self._post_register(name="Another", nfc_uid="B2C3D4E5", password="1234")
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(response.json()["success"])
+        self.assertIn("PIN", response.json()["message"])
+
+    def test_register_requires_face_capture(self):
+        response = self._post_register(name="No Face", nfc_uid="B2C3D4E5", password="5678", capture_face=False)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["success"])
+        self.assertIn("얼굴", response.json()["message"])
+
+    def test_nfc_capture_endpoints_delegate_to_doorlock_server(self):
+        start_response = self.client.post("/api/nfc_capture/start")
+        self.assertEqual(start_response.status_code, 200)
+        self.assertTrue(start_response.json()["success"])
+        self.mock_doorlock_server.start_nfc_capture.assert_called_once_with(timeout_seconds=15)
+
+        status_response = self.client.get("/api/nfc_capture/status")
+        self.assertEqual(status_response.status_code, 200)
+        self.assertEqual(status_response.json()["capture"]["uid"], "A1B2C3D4")
+        self.mock_doorlock_server.get_nfc_capture_status.assert_called_once()
 
     def test_users_endpoints_and_delete(self):
         first = self._post_register(name="Alice", nfc_uid="FACE0001", password="0001")
@@ -144,6 +186,28 @@ class TestWebApiDeep(unittest.TestCase):
         remaining = self.client.get("/api/users").json()
         self.assertEqual(len(remaining), 1)
         self.assertNotIn(target_id, {u["id"] for u in remaining})
+
+    def test_capture_user_face_updates_existing_profile(self):
+        user_id = self.db.add_user("Face Update", "FACE0003", "0003")
+        self.assertFalse(self.db.get_user(user_id)["face_enrolled"])
+
+        self.mock_vision.capture_result = (b"new-face", "face updated")
+        response = self.client.post(f"/api/users/{user_id}/capture_face")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(self.db.get_face_encoding(user_id), b"new-face")
+        self.assertTrue(self.db.get_user(user_id)["face_enrolled"])
+
+    def test_capture_user_face_rejects_capture_failure(self):
+        user_id = self.db.add_user("Face Failure", "FACE0004", "0004")
+        self.mock_vision.capture_result = (None, "no face detected")
+
+        response = self.client.post(f"/api/users/{user_id}/capture_face")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["success"])
+        self.assertIn("no face", response.json()["message"])
 
     def test_logs_payload_contains_alert_state(self):
         self.db.log_access(None, "PW", "UNAUTHORIZED", snapshot=b"\x00\x01")

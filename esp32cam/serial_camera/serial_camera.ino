@@ -4,6 +4,7 @@
 // "CAPTURE\n" and receives "JPEG:<length>\n<jpeg bytes>\nEND\n".
 
 #include "esp_camera.h"
+#include <string.h>
 
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
@@ -24,6 +25,7 @@
 #define PCLK_GPIO_NUM     22
 
 static bool cameraReady = false;
+static const unsigned long SERIAL_BAUD = 2000000;
 
 static void sendError(const char *message) {
   Serial.print("ERR:");
@@ -31,7 +33,7 @@ static void sendError(const char *message) {
 }
 
 static bool initCamera() {
-  camera_config_t config;
+  camera_config_t config = {};
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM;
@@ -52,31 +54,38 @@ static bool initCamera() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.grab_mode = CAMERA_GRAB_LATEST;
-  config.fb_location = CAMERA_FB_IN_PSRAM;
-  config.jpeg_quality = 12;
-  config.fb_count = 2;
-
-  if (psramFound()) {
-    config.frame_size = FRAMESIZE_VGA;
-  } else {
-    config.frame_size = FRAMESIZE_QVGA;
-    config.fb_count = 1;
-    config.fb_location = CAMERA_FB_IN_DRAM;
-  }
+  config.frame_size = psramFound() ? FRAMESIZE_VGA : FRAMESIZE_QVGA;
+  config.grab_mode = psramFound() ? CAMERA_GRAB_LATEST : CAMERA_GRAB_WHEN_EMPTY;
+  config.fb_location = psramFound() ? CAMERA_FB_IN_PSRAM : CAMERA_FB_IN_DRAM;
+  config.jpeg_quality = 10;
+  config.fb_count = psramFound() ? 2 : 1;
+  config.sccb_i2c_port = 0;
 
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
+    Serial.printf("ERR:init_failed:0x%x\n", err);
     return false;
   }
 
   sensor_t *sensor = esp_camera_sensor_get();
   if (sensor) {
     sensor->set_framesize(sensor, psramFound() ? FRAMESIZE_VGA : FRAMESIZE_QVGA);
-    sensor->set_quality(sensor, 12);
+    sensor->set_quality(sensor, 10);
+    sensor->set_vflip(sensor, 1);
+    sensor->set_hmirror(sensor, 1);
   }
 
   return true;
+}
+
+static void warmupCamera() {
+  for (int i = 0; i < 2; i++) {
+    camera_fb_t *fb = esp_camera_fb_get();
+    if (fb) {
+      esp_camera_fb_return(fb);
+    }
+    delay(40);
+  }
 }
 
 static void captureAndSend() {
@@ -100,10 +109,12 @@ static void captureAndSend() {
 }
 
 void setup() {
-  Serial.begin(921600);
+  Serial.begin(SERIAL_BAUD);
+  Serial.setDebugOutput(false);
   delay(1200);
   cameraReady = initCamera();
   if (cameraReady) {
+    warmupCamera();
     Serial.println("ESP32CAM_READY");
   } else {
     Serial.println("ERR:init_failed");
@@ -116,15 +127,22 @@ void loop() {
     return;
   }
 
-  String command = Serial.readStringUntil('\n');
-  command.trim();
-  command.toUpperCase();
+  char command[16] = {0};
+  size_t length = Serial.readBytesUntil('\n', command, sizeof(command) - 1);
+  while (length > 0 && (command[length - 1] == '\r' || command[length - 1] == '\n' || command[length - 1] == ' ')) {
+    command[--length] = '\0';
+  }
+  for (size_t i = 0; i < length; i++) {
+    if (command[i] >= 'a' && command[i] <= 'z') {
+      command[i] = command[i] - 'a' + 'A';
+    }
+  }
 
-  if (command == "CAPTURE") {
+  if (strcmp(command, "CAPTURE") == 0) {
     captureAndSend();
-  } else if (command == "PING") {
+  } else if (strcmp(command, "PING") == 0) {
     Serial.println(cameraReady ? "PONG:READY" : "PONG:NOT_READY");
-  } else if (command.length() > 0) {
+  } else if (length > 0) {
     sendError("unknown_command");
   }
 }

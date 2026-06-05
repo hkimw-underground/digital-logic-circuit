@@ -34,6 +34,14 @@ class DoorLockServer:
         self.serial_last_activity_at = None
         self._serial_last_healthcheck = 0
         self.serial_lock = threading.RLock()
+        self.nfc_capture_lock = threading.RLock()
+        self.nfc_capture = {
+            "active": False,
+            "uid": None,
+            "started_at": None,
+            "expires_at": None,
+            "captured_at": None,
+        }
         self.last_failed_attempt = 0
         self.last_lockdown_alert = None
         self.rate_limit_seconds = self._min_float(RATE_LIMIT_SECONDS, 0.0)
@@ -43,6 +51,46 @@ class DoorLockServer:
         self.db_backup_interval_seconds = self._min_float(DB_BACKUP_INTERVAL_SECONDS, 1.0)
         self.serial_reconnect_interval_seconds = self._min_float(SERIAL_RECONNECT_INTERVAL_SECONDS, 0.1)
         self.connect_serial()
+
+    def start_nfc_capture(self, timeout_seconds=15):
+        timeout = self._min_float(timeout_seconds, 1.0)
+        now = time.time()
+        with self.nfc_capture_lock:
+            self.nfc_capture = {
+                "active": True,
+                "uid": None,
+                "started_at": now,
+                "expires_at": now + timeout,
+                "captured_at": None,
+            }
+            return self.get_nfc_capture_status()
+
+    def get_nfc_capture_status(self):
+        now = time.time()
+        with self.nfc_capture_lock:
+            capture = dict(self.nfc_capture)
+            if capture["active"] and capture["expires_at"] and now >= capture["expires_at"]:
+                capture["active"] = False
+                self.nfc_capture["active"] = False
+            remaining = 0
+            if capture["active"] and capture["expires_at"]:
+                remaining = max(0, int(capture["expires_at"] - now + 0.999))
+            capture["remaining_seconds"] = remaining
+            return capture
+
+    def _capture_nfc_uid(self, uid):
+        now = time.time()
+        with self.nfc_capture_lock:
+            capture = self.nfc_capture
+            if not capture["active"]:
+                return False
+            if capture["expires_at"] and now >= capture["expires_at"]:
+                capture["active"] = False
+                return False
+            capture["active"] = False
+            capture["uid"] = str(uid or "").strip().upper()
+            capture["captured_at"] = now
+            return True
 
     @staticmethod
     def _min_float(value, minimum):
@@ -363,6 +411,11 @@ class DoorLockServer:
         parsed = self._parse_wakeup_message(data)
         if not parsed:
             return
+        auth_type, value = parsed
+
+        if auth_type == "NFC" and self._capture_nfc_uid(value):
+            print(f"[NFC_CAPTURE] Captured NFC UID for registration: {value}")
+            return
 
         # 최근 실패 기록이 너무 많으면 잠시 입력을 무시한다.
         recent_failures = self.db.get_recent_failures_count("ALL")
@@ -385,7 +438,6 @@ class DoorLockServer:
             print(f"[DENIED] Rate limited. Please wait {self.rate_limit_seconds:g} seconds before trying again.")
             return
 
-        auth_type, value = parsed
         user = None
 
         if auth_type == "NFC":

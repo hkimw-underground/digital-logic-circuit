@@ -71,6 +71,9 @@
                         <a href="/register" class="ide-button">
                             <span class="material-symbols-rounded" aria-hidden="true">person_add</span>신규 등록
                         </a>
+                        <button id="detail-face-capture" class="ide-button" type="button">
+                            <span class="material-symbols-rounded" aria-hidden="true">photo_camera</span>얼굴 재캡처
+                        </button>
                         <button id="detail-delete" class="delete-btn" type="button">
                             <span class="material-symbols-rounded" aria-hidden="true">delete</span>삭제
                         </button>
@@ -305,6 +308,7 @@
             document.getElementById('activity-title').textContent = `${formatValue(user.username)} 출입 기록`;
             document.getElementById('activity-summary').textContent =
                 `출입 ${stats.successful_entries || 0}회 / 실패 ${stats.failed_events || 0}회 / 전체 기록 ${stats.total_events || 0}개`;
+            document.getElementById('detail-face-capture').onclick = () => captureUserFace(user.id);
             document.getElementById('detail-delete').onclick = () => deleteUser(user.id);
 
             const body = document.getElementById('activity-body');
@@ -356,6 +360,28 @@
                 await fetchUsers();
             } catch (e) {
                 alert('삭제에 실패했습니다.');
+            }
+        }
+
+        async function captureUserFace(id) {
+            const user = usersCache.find((entry) => Number(entry.id) === Number(id));
+            const name = user ? user.username : `ID ${id}`;
+            if (!confirm(`"${name}" 사용자의 얼굴 정보를 현재 카메라 화면으로 갱신할까요?`)) return;
+            const button = document.getElementById('detail-face-capture');
+            const original = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>캡처 중...';
+            try {
+                const r = await fetch(`/api/users/${encodeURIComponent(id)}/capture_face`, { method: 'POST' });
+                const j = await r.json();
+                if (!j.success) throw new Error(j.message || 'capture failed');
+                await fetchUsers();
+                alert('얼굴 정보가 갱신되었습니다.');
+            } catch (e) {
+                alert(e.message || '얼굴 캡처에 실패했습니다.');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = original;
             }
         }
     </script>

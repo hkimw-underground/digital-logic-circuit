@@ -28,7 +28,7 @@ def validate_registration(name, nfc_uid, password):
         raise RegistrationValidationError("Name cannot contain control characters.")
     if not normalized_uid or not NFC_UID_RE.fullmatch(normalized_uid):
         raise RegistrationValidationError("NFC UID must be 4 to 32 hexadecimal characters.")
-    if not pin.isdigit() or not 4 <= len(pin) <= 8:
-        raise RegistrationValidationError("PIN must be 4 to 8 digits.")
+    if not pin.isdigit() or len(pin) != 4:
+        raise RegistrationValidationError("PIN must be exactly 4 digits.")
 
     return username, normalized_uid, pin

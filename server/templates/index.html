@@ -107,7 +107,7 @@
                     <span class="ide-badge">영상</span>
                 </div>
                 <div class="feed-shell">
-                    <img src="/video_feed" class="cam-feed" alt="카메라 화면">
+                    <img data-src="/video_feed" class="cam-feed" alt="카메라 화면">
                 </div>
             </section>
 
@@ -218,7 +218,29 @@
         let snapshotModal;
         document.addEventListener("DOMContentLoaded", () => {
             snapshotModal = new bootstrap.Modal(document.getElementById('snapshotModal'));
+            setupCameraFeed('.cam-feed');
         });
+
+        function setupCameraFeed(selector) {
+            const img = document.querySelector(selector);
+            if (!img) return;
+            const streamUrl = img.dataset.src || '/video_feed';
+            const start = () => {
+                if (!document.hidden && !img.getAttribute('src')) {
+                    img.src = `${streamUrl}?t=${Date.now()}`;
+                }
+            };
+            const stop = () => {
+                img.removeAttribute('src');
+            };
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) stop();
+                else start();
+            });
+            window.addEventListener('pagehide', stop);
+            window.addEventListener('beforeunload', stop);
+            start();
+        }
 
         const escapeHtml = (value) => {
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };

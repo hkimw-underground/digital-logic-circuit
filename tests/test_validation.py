@@ -19,6 +19,12 @@ class TestRegistrationValidation(unittest.TestCase):
         with self.assertRaises(RegistrationValidationError):
             validate_registration("Alice", "A1B2C3D4", "12A4")
 
+    def test_rejects_pin_lengths_other_than_four_digits(self):
+        for pin in ("123", "12345"):
+            with self.subTest(pin=pin):
+                with self.assertRaises(RegistrationValidationError):
+                    validate_registration("Alice", "A1B2C3D4", pin)
+
     def test_normalize_nfc_uid_handles_blank_values(self):
         self.assertIsNone(normalize_nfc_uid("   "))
 

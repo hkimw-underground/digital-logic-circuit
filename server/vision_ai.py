@@ -1,4 +1,6 @@
 import hashlib
+import os
+import threading
 import time
 from dataclasses import dataclass
 
@@ -54,7 +56,7 @@ except ImportError:
 class SerialJpegCamera:
     """ESP32-CAM USB-serial JPEG source."""
 
-    def __init__(self, port, baud_rate=921600, timeout_seconds=4.0, boot_wait_seconds=1.5):
+    def __init__(self, port, baud_rate=2000000, timeout_seconds=4.0, boot_wait_seconds=1.5):
         self.port = port
         self.baud_rate = baud_rate
         self.timeout_seconds = timeout_seconds
@@ -63,6 +65,7 @@ class SerialJpegCamera:
         self.last_error = None
         self.candidates = []
         self.device_ready = True
+        self.read_lock = threading.Lock()
 
         if serial is None:
             self.last_error = "pyserial is not installed."
@@ -78,16 +81,13 @@ class SerialJpegCamera:
                     self.last_error = "No ESP32-CAM USB-serial candidate found. Check /dev/serial/by-id."
                     return
                 self.port = port
-            self.serial = serial.Serial(
-                port,
-                baud_rate,
-                timeout=timeout_seconds,
-                write_timeout=timeout_seconds,
-            )
+            self.serial = self._open_serial_connection(port, timeout_seconds, timeout_seconds)
+            self._set_run_mode_lines(self.serial)
             if boot_wait_seconds > 0:
                 time.sleep(boot_wait_seconds)
             self.serial.reset_input_buffer()
             self.serial.reset_output_buffer()
+            self._wait_for_ready()
         except Exception as e:
             self.last_error = str(e)
             self.serial = None
@@ -158,12 +158,8 @@ class SerialJpegCamera:
     def _probe_esp32cam(self, port):
         probe_serial = None
         try:
-            probe_serial = serial.Serial(
-                port,
-                self.baud_rate,
-                timeout=0.25,
-                write_timeout=0.5,
-            )
+            probe_serial = self._open_serial_connection(port, 0.25, 0.5)
+            self._set_run_mode_lines(probe_serial)
             if self.boot_wait_seconds > 0:
                 time.sleep(min(self.boot_wait_seconds, 1.5))
             probe_serial.write(b"PING\n")
@@ -194,6 +190,81 @@ class SerialJpegCamera:
                 except Exception:
                     pass
 
+    def _set_run_mode_lines(self, serial_obj):
+        try:
+            serial_obj.dtr = False
+            serial_obj.rts = False
+        except Exception:
+            pass
+
+    def _open_serial_connection(self, port, timeout_seconds, write_timeout_seconds):
+        serial_obj = None
+        try:
+            serial_obj = serial.Serial()
+            serial_obj.port = port
+            serial_obj.baudrate = self.baud_rate
+            serial_obj.timeout = timeout_seconds
+            serial_obj.write_timeout = write_timeout_seconds
+            serial_obj.rtscts = False
+            serial_obj.dsrdtr = False
+            self._set_run_mode_lines(serial_obj)
+            serial_obj.open()
+            self._set_run_mode_lines(serial_obj)
+            return serial_obj
+        except Exception:
+            if serial_obj:
+                try:
+                    serial_obj.close()
+                except Exception:
+                    pass
+            return serial.Serial(
+                port,
+                self.baud_rate,
+                timeout=timeout_seconds,
+                write_timeout=write_timeout_seconds,
+                rtscts=False,
+                dsrdtr=False,
+            )
+
+    def _wait_for_ready(self):
+        previous_timeout = getattr(self.serial, "timeout", None)
+        try:
+            self.serial.timeout = 0.25
+            self.serial.reset_input_buffer()
+            deadline = time.monotonic() + max(12.0, self.boot_wait_seconds + 8.0)
+            next_ping_at = 0.0
+            while time.monotonic() < deadline:
+                now = time.monotonic()
+                if now >= next_ping_at:
+                    self.serial.write(b"PING\n")
+                    self.serial.flush()
+                    next_ping_at = now + 0.5
+                raw = self.serial.readline()
+                if not raw:
+                    continue
+                line = raw.decode("ascii", errors="ignore").strip()
+                if line.startswith("PONG:READY") or line.startswith("ESP32CAM_READY"):
+                    self.device_ready = True
+                    self.last_error = None
+                    return
+                if line.startswith("PONG:NOT_READY"):
+                    self.device_ready = False
+                    self.last_error = f"ESP32-CAM responded but camera is not ready ({line})."
+                    return
+                if line.startswith("ERR:init_failed"):
+                    self.device_ready = False
+                    self.last_error = line
+                    return
+            self.last_error = self.last_error or "ESP32-CAM did not respond to readiness probe."
+        except Exception as e:
+            self.last_error = str(e)
+            return
+        finally:
+            try:
+                self.serial.timeout = previous_timeout
+            except Exception:
+                pass
+
     def _auto_detect_port(self):
         self.candidates = []
         candidates = self._esp32_candidate_ports()
@@ -209,64 +280,102 @@ class SerialJpegCamera:
         return None
 
     def isOpened(self):
-        return bool(self.serial and self.serial.is_open and self.device_ready)
+        return bool(self.serial and self.serial.is_open and self.device_ready and self.port_present())
 
-    def _read_jpeg_payload(self):
-        deadline = time.monotonic() + self.timeout_seconds
-        while time.monotonic() < deadline:
-            header = self.serial.readline().decode("ascii", errors="ignore").strip()
-            if not header:
-                continue
-            if header.startswith("ERR:"):
-                self.last_error = header
-                return None
-            if not header.startswith("JPEG:"):
-                continue
+    def _port_requires_filesystem_check(self):
+        port = str(self.port or "")
+        for prefix in ("/dev/ttyUSB", "/dev/ttyACM"):
+            if port.startswith(prefix):
+                return port[len(prefix):].isdigit()
+        return False
+
+    def port_present(self):
+        if not self._port_requires_filesystem_check():
+            return True
+        present = os.path.exists(str(self.port))
+        if not present:
+            self.last_error = "ESP32-CAM serial port disappeared. USB-C cable may be unplugged."
+        return present
+
+    def _read_jpeg_payload(self, timeout_seconds=None):
+        timeout_seconds = self.timeout_seconds if timeout_seconds is None else max(0.1, float(timeout_seconds))
+        deadline = time.monotonic() + timeout_seconds
+        previous_timeout = getattr(self.serial, "timeout", None)
+        try:
+            self.serial.timeout = min(0.2, timeout_seconds)
+            while time.monotonic() < deadline:
+                header = self.serial.readline().decode("ascii", errors="ignore").strip()
+                if not header:
+                    continue
+                if header.startswith("ERR:"):
+                    self.last_error = header
+                    return None
+                if not header.startswith("JPEG:"):
+                    continue
+                try:
+                    length = int(header.split(":", 1)[1])
+                except ValueError:
+                    self.last_error = f"Invalid JPEG header: {header}"
+                    return None
+                if length <= 0 or length > 500000:
+                    self.last_error = f"Invalid JPEG length: {length}"
+                    return None
+
+                payload = bytearray()
+                while len(payload) < length and time.monotonic() < deadline:
+                    chunk = self.serial.read(min(4096, length - len(payload)))
+                    if chunk:
+                        payload.extend(chunk)
+                if len(payload) != length:
+                    self.last_error = f"Incomplete JPEG payload: {len(payload)}/{length}"
+                    return None
+                return bytes(payload)
+        finally:
             try:
-                length = int(header.split(":", 1)[1])
-            except ValueError:
-                self.last_error = f"Invalid JPEG header: {header}"
-                return None
-            if length <= 0 or length > 500000:
-                self.last_error = f"Invalid JPEG length: {length}"
-                return None
-
-            payload = bytearray()
-            while len(payload) < length and time.monotonic() < deadline:
-                chunk = self.serial.read(length - len(payload))
-                if chunk:
-                    payload.extend(chunk)
-            if len(payload) != length:
-                self.last_error = f"Incomplete JPEG payload: {len(payload)}/{length}"
-                return None
-            return bytes(payload)
+                self.serial.timeout = previous_timeout
+            except Exception:
+                pass
 
         self.last_error = "Timed out waiting for JPEG header."
         return None
 
+    def read_jpeg(self, max_attempts=2, timeout_seconds=None):
+        with self.read_lock:
+            if self.serial and self.serial.is_open and not self.device_ready:
+                self.last_error = self.last_error or "ESP32-CAM responded but camera is not ready."
+                return False, None
+            if not self.isOpened():
+                return False, None
+
+            try:
+                attempts = max(1, int(max_attempts or 1))
+                for attempt in range(attempts):
+                    self.serial.reset_input_buffer()
+                    self.serial.write(b"CAPTURE\n")
+                    self.serial.flush()
+                    jpeg = self._read_jpeg_payload(timeout_seconds=timeout_seconds)
+                    if jpeg:
+                        self.last_error = None
+                        return True, jpeg
+                    if attempt < attempts - 1:
+                        time.sleep(0.03)
+                return False, None
+            except Exception as e:
+                self.last_error = str(e)
+                if "device disconnected" in self.last_error.lower() or "input/output error" in self.last_error.lower():
+                    self.device_ready = False
+                return False, None
+
     def read(self):
-        if self.serial and self.serial.is_open and not self.device_ready:
-            self.last_error = self.last_error or "ESP32-CAM responded but camera is not ready."
-            return False, None
-        if not self.isOpened():
+        success, jpeg = self.read_jpeg()
+        if not success:
             return False, None
 
-        try:
-            self.serial.reset_input_buffer()
-            self.serial.write(b"CAPTURE\n")
-            self.serial.flush()
-            jpeg = self._read_jpeg_payload()
-            if not jpeg:
-                return False, None
-
-            frame = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
-            if frame is None:
-                self.last_error = "OpenCV could not decode ESP32-CAM JPEG."
-                return False, None
-            return True, frame
-        except Exception as e:
-            self.last_error = str(e)
+        frame = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            self.last_error = "OpenCV could not decode ESP32-CAM JPEG."
             return False, None
+        return True, frame
 
     def release(self):
         if self.serial:
@@ -376,6 +485,12 @@ class VisionAI:
                     self.camera_last_error = self.camera.last_error
                     print(f"[VISION] ESP32-CAM serial camera unavailable on {port}: {self.camera_last_error}")
                     return False
+                if self.camera.last_error and "readiness probe" in self.camera.last_error:
+                    probe_ok, _ = self.camera.read_jpeg()
+                    if not probe_ok:
+                        self.camera_last_error = self.camera.last_error
+                        print(f"[VISION] ESP32-CAM serial camera unavailable on {port}: {self.camera_last_error}")
+                        return False
                 print(f"[VISION] ESP32-CAM serial camera connected: {self.camera.port} @ {ESP32CAM_BAUD_RATE}")
                 self.camera_available = True
                 return True

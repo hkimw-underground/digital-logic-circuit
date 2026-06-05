@@ -41,7 +41,7 @@ ESP32-CAM을 USB-C로 노트북에 직접 꽂는 경우에는 일반 웹캠처�
 ## 3. 시연 추천 시나리오 (5~7분)
 
 1. **등록 흐름** (`/register`)
-   - 이름 + NFC UID (예: `DEMO1234`) + PIN (예: `12345678`) 입력
+   - 이름 + NFC UID (예: `DEMO1234`) + PIN 4자리 (예: `1234`) 입력
    - "Capture Face Encoding" 클릭 → 성공 메시지 확인
    - Register Identity
 

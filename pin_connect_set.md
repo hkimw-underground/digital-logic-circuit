@@ -215,6 +215,8 @@ Serial Monitor에서 태그를 가까이 댔을 때 아래 형식이 출력되�
 WAKEUP:NFC:A1B2C3D4
 ```
 
+태그를 대도 비프음이 전혀 없고 `WAKEUP:NFC:<UID>`도 나오지 않으면 사용자 등록 문제가 아니라 MFRC522 리더 통신 문제로 본다. `NFC_VERSION:0x00` 또는 `0xFF`가 반복되면 Arduino가 MFRC522 칩 자체를 SPI로 읽지 못하는 상태다. 이 경우 카드 종류나 등록 여부를 바꿔도 해결되지 않는다.
+
 출력이 없으면 다음 순서로 확인한다.
 
 1. MFRC522 전원이 3.3V인지 확인
@@ -222,6 +224,8 @@ WAKEUP:NFC:A1B2C3D4
 3. `D10`, `D11`, `D13`, `D9`가 HV 쪽으로 들어가는지 확인
 4. MFRC522 `SDA/SS`, `MOSI`, `SCK`, `RST`가 LV 쪽에서 나오는지 확인
 5. `MISO -> D12` 직결 확인
+6. MFRC522의 `SDA`는 I2C SDA가 아니라 SPI `SS/CS`이므로 Arduino `D10`에 연결했는지 확인
+7. 레벨 시프터 채널 방향과 접촉이 의심되면 `SCK`, `MOSI`, `SDA/SS`, `RST`를 한 채널씩 다시 꽂아 확인
 
 ### 서보
 
@@ -260,7 +264,7 @@ DOOR_CLOSED
 | 서버가 Arduino를 못 찾음 | GUI Hardware Link Status의 후보 포트, `/dev/ttyACM*`, USB-C 케이블, 최신 펌웨어의 `PING` 응답 |
 | `SYSTEM_READY`가 안 보임 | 보드/포트 선택, 업로드 성공 여부, Serial Monitor baud 9600 |
 | 키패드가 안 먹음 | `D2/D3` 반대 연결 여부, TTP229 전원, `ttp229_test` 결과 |
-| NFC가 안 읽힘 | MFRC522 3.3V, 레벨 시프터 방향, `SDA=D10`, `RST=D9` |
+| NFC가 안 읽힘 | 카드 등록 문제가 아니라 리더 통신부터 확인. `NFC_VERSION:0x00`/`0xFF`이면 MFRC522 3.3V, 공통 GND, 레벨 시프터 `HV/LV/GND`, `SDA/SS=D10`, `RST=D9`, `MOSI=D11`, `MISO=D12`, `SCK=D13` 순서로 재점검 |
 | 서보가 떨림 | 5V 전원 전류 부족, GND 공통, 서보 신호 `D5` |
 | 부저 소리가 작음 | 5V 레일 공급, 수동/능동 부저 구분, `A2` 연결 |
 | 인증은 되는데 문이 안 열림 | 서버가 `OPEN_DOOR`를 보내는지, 펌웨어가 같은 포트에 연결됐는지 확인 |

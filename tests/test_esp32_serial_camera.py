@@ -96,6 +96,25 @@ class TestEsp32SerialCamera(unittest.TestCase):
         camera.release()
         self.assertFalse(camera.isOpened())
 
+    def test_serial_jpeg_camera_can_return_raw_jpeg(self):
+        with patch.object(vision_ai.serial, "Serial", FakeSerial):
+            camera = SerialJpegCamera("/dev/ttyUSB_FAKE", boot_wait_seconds=0)
+
+        ok, jpeg = camera.read_jpeg()
+        self.assertTrue(ok)
+        self.assertTrue(jpeg.startswith(b"\xff\xd8"))
+        self.assertEqual(camera.serial.writes[-1], b"CAPTURE\n")
+        camera.release()
+
+    def test_serial_jpeg_camera_reports_missing_linux_usb_port(self):
+        with patch.object(vision_ai.os.path, "exists", return_value=False), \
+                patch.object(vision_ai.serial, "Serial", FakeSerial):
+            camera = SerialJpegCamera("/dev/ttyUSB0", boot_wait_seconds=0)
+
+        self.assertFalse(camera.isOpened())
+        self.assertIn("USB-C cable", camera.last_error)
+        camera.release()
+
     def test_vision_ai_uses_serial_camera_url(self):
         with patch.object(vision_ai, "CAMERA_URL", "serial:/dev/ttyUSB_FAKE"), \
                 patch.object(vision_ai, "ESP32CAM_BOOT_WAIT_SECONDS", 0), \
@@ -114,11 +133,12 @@ class TestEsp32SerialCamera(unittest.TestCase):
         ch340 = MagicMock(device="/dev/ttyUSB0", description="USB2.0-Serial CH340", hwid="USB VID:PID=1A86:7523", manufacturer="", product="")
 
         with patch("serial.tools.list_ports.comports", return_value=[arduino, xilinx, ch340]), \
+                patch.object(vision_ai.os.path, "exists", return_value=True), \
                 patch.object(vision_ai.serial, "Serial", FakeSerial):
             camera = SerialJpegCamera("auto", boot_wait_seconds=0)
 
-        self.assertEqual(camera.port, "/dev/ttyUSB0")
-        self.assertTrue(camera.isOpened())
+            self.assertEqual(camera.port, "/dev/ttyUSB0")
+            self.assertTrue(camera.isOpened())
         camera.release()
 
     def test_auto_detect_keeps_not_ready_esp32_port_but_marks_camera_unavailable(self):

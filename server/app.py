@@ -46,8 +46,14 @@ def register_user():
         )
     except RegistrationValidationError as e:
         return jsonify({"success": False, "message": str(e)}), 400
-    
-    user_id = get_db().add_user(name, nfc_uid=nfc_uid, password=password)
+
+    database = get_db()
+    if database.verify_nfc(nfc_uid):
+        return jsonify({"success": False, "message": "This NFC UID is already registered."}), 409
+    if database.verify_password(password):
+        return jsonify({"success": False, "message": "This PIN is already registered."}), 409
+
+    user_id = database.add_user(name, nfc_uid=nfc_uid, password=password)
     if user_id:
         return jsonify({"success": True, "message": "User registered successfully!"})
     return jsonify({"success": False, "message": "NFC UID already exists!"}), 409

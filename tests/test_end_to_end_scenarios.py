@@ -1,3 +1,4 @@
+import asyncio
 import importlib.util
 import os
 import tempfile
@@ -85,6 +86,66 @@ class TestEndToEndScenarios(unittest.TestCase):
         self.assertTrue(chunk.startswith(b"--frame\r\n"))
         self.assertIn(b"Content-Type: image/jpeg", chunk)
         self.assertIn(b"\xff\xd8", chunk)
+
+    def test_camera_stream_hub_uses_single_fast_capture_attempt(self):
+        class Camera:
+            def __init__(self):
+                self.calls = []
+
+            def read_jpeg(self, max_attempts=2, timeout_seconds=None):
+                self.calls.append((max_attempts, timeout_seconds))
+                return True, b"\xff\xd8stream\xff\xd9"
+
+        camera = Camera()
+        vision = MagicMock(camera_available=True, camera=camera)
+        hub = web_app.CameraStreamHub(lambda: vision)
+
+        self.assertEqual(hub._capture_frame(), b"\xff\xd8stream\xff\xd9")
+        self.assertEqual(camera.calls, [(1, hub.live_timeout_seconds)])
+
+    def test_camera_stream_hub_serves_cached_frame_to_multiple_clients(self):
+        hub = web_app.CameraStreamHub(lambda: self.web_vision)
+        hub._ensure_worker = lambda: None
+        hub.latest_jpeg = b"\xff\xd8cached\xff\xd9"
+        hub.latest_seq = 1
+
+        first = hub.frames()
+        second = hub.frames()
+        try:
+            self.assertIn(b"cached", next(first))
+            self.assertIn(b"cached", next(second))
+            self.assertEqual(hub.clients, 2)
+        finally:
+            first.close()
+            second.close()
+        self.assertEqual(hub.clients, 0)
+
+    def test_camera_stream_hub_async_frames_serves_cached_frame(self):
+        hub = web_app.CameraStreamHub(lambda: self.web_vision)
+        hub._ensure_worker = lambda: None
+        hub.latest_jpeg = b"\xff\xd8async-cached\xff\xd9"
+        hub.latest_seq = 1
+
+        async def read_one():
+            stream = hub.async_frames()
+            try:
+                return await stream.__anext__()
+            finally:
+                await stream.aclose()
+
+        chunk = asyncio.run(read_one())
+        self.assertIn(b"async-cached", chunk)
+        self.assertEqual(hub.clients, 0)
+
+    def test_camera_stream_hub_marks_stale_after_failures(self):
+        hub = web_app.CameraStreamHub(lambda: self.web_vision)
+        hub._mark_success()
+        hub.last_success_at -= 3.0
+        hub._mark_failure("camera unplugged")
+
+        status = hub.status_overlay(stale_after_seconds=2.5)
+        self.assertTrue(status["stream_stale"])
+        self.assertEqual(status["stream_last_error"], "camera unplugged")
 
     def test_registration_authentication_logs_and_manual_control_flow(self):
         capture_response = self.client.post("/api/capture_face")

@@ -140,7 +140,7 @@ class FakeArduino:
 
     def send_pin(self, pin: str = None):
         if pin is None:
-            pin = "".join(random.choices("0123456789", k=random.randint(4, 8)))
+            pin = "".join(random.choices("0123456789", k=4))
         self.send(f"WAKEUP:PW:{pin}")
 
     def send_garbage(self):
@@ -159,7 +159,7 @@ class FakeArduino:
         print(f"{C.BOLD}Fake Arduino Control Menu (포트: {self.slave_name}){C.ENDC}")
         print("="*60)
         print("  1) 정상 NFC 태그 전송          (랜덤 UID)")
-        print("  2) 정상 PIN 입력               (랜덤 4~8자리)")
+        print("  2) 정상 PIN 입력               (랜덤 4자리)")
         print("  3) 등록되지 않은 NFC (실패)")
         print("  4) 잘못된 PIN (실패)")
         print("  5) 🔥 연속 실패 12회 폭주 (LOCKDOWN 유발)")
