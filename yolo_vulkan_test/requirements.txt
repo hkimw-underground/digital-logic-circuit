@@ -1,0 +1,5 @@
+mediapipe==0.10.14
+opencv-python==4.9.0.80
+numpy==1.26.4
+ultralytics==8.2.0
+onnxruntime==1.17.1

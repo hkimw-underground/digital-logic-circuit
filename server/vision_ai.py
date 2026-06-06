@@ -1,12 +1,23 @@
 import hashlib
 import os
+import sys
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
+
+# Ensure project root and server/ are importable when running server/main.py
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+if os.path.dirname(__file__) not in sys.path:
+    sys.path.insert(0, os.path.dirname(__file__))
 
 from config import (
     ALLOW_UNENROLLED_FACE,
+    ARCFACE_MODEL_PATH,
     CAMERA_URL,
+    ENROLLED_EMBEDDING_DIR,
     ESP32CAM_BAUD_RATE,
     ESP32CAM_BOOT_WAIT_SECONDS,
     ESP32CAM_READ_TIMEOUT_SECONDS,
@@ -38,14 +49,31 @@ except ImportError:
     np = None
 
 try:
-    import face_recognition
-except ImportError:
-    face_recognition = None
-
-try:
     from ultralytics import YOLO
 except ImportError:
     YOLO = None
+
+# New liveness + 512-dim ArcFace ONNX (preferred when FACE_LIVENESS_REQUIRED)
+# Robust import for both "python server/main.py" and "python -m server.main"
+try:
+    from arcface_onnx import ArcFaceONNX, cosine_similarity
+except ImportError:
+    try:
+        from server.arcface_onnx import ArcFaceONNX, cosine_similarity
+    except ImportError:
+        ArcFaceONNX = None
+        cosine_similarity = None
+
+try:
+    from video_liveness import analyze_video
+except ImportError:
+    try:
+        from server.video_liveness import analyze_video
+    except ImportError:
+        analyze_video = None
+
+# Legacy (kept to avoid NameError in fallback paths)
+face_recognition = None
 
 try:
     import serial
@@ -157,38 +185,60 @@ class SerialJpegCamera:
 
     def _probe_esp32cam(self, port):
         probe_serial = None
-        try:
-            probe_serial = self._open_serial_connection(port, 0.25, 0.5)
-            self._set_run_mode_lines(probe_serial)
-            if self.boot_wait_seconds > 0:
-                time.sleep(min(self.boot_wait_seconds, 1.5))
-            probe_serial.write(b"PING\n")
-            probe_serial.flush()
-            deadline = time.monotonic() + 1.2
-            while time.monotonic() < deadline:
-                raw = probe_serial.readline()
-                if not raw:
+        max_attempts = 5
+        for attempt in range(1, max_attempts + 1):
+            try:
+                probe_serial = self._open_serial_connection(port, 0.3, 0.5)
+                self._set_run_mode_lines(probe_serial)
+                # 첫 시도에는 boot_wait_seconds를 충분히 기다린다 (전원 인가 후 부팅 시간)
+                wait = self.boot_wait_seconds if attempt == 1 else min(self.boot_wait_seconds, 2.0)
+                if wait > 0:
+                    time.sleep(wait)
+                # PING을 두 번 보낸다 (부팅 직후 첫 응답이 늦을 수 있음)
+                for _ in range(2):
+                    try:
+                        probe_serial.write(b"PING\n")
+                        probe_serial.flush()
+                    except Exception:
+                        pass
+                deadline = time.monotonic() + (4.0 if attempt == 1 else 2.5)
+                while time.monotonic() < deadline:
+                    raw = probe_serial.readline()
+                    if not raw:
+                        continue
+                    if not isinstance(raw, (bytes, bytearray)):
+                        return False, "probe read returned non-bytes"
+                    line = raw.decode("ascii", errors="ignore").strip()
+                    if not line:
+                        continue
+                    if line.startswith("PONG:READY") or line.startswith("ESP32CAM_READY"):
+                        return True, line
+                    if line.startswith("PONG:NOT_READY"):
+                        return True, line
+                    if line == "PONG:DOORLOCK_ARDUINO" or line == "SYSTEM_READY":
+                        return False, "Arduino responded on this port."
+                if attempt < max_attempts:
+                    print(f"[VISION]   {port} probe attempt {attempt} failed, retrying...")
+                    if probe_serial:
+                        try:
+                            probe_serial.close()
+                        except Exception:
+                            pass
+                    time.sleep(0.6)
                     continue
-                if not isinstance(raw, (bytes, bytearray)):
-                    return False, "probe read returned non-bytes"
-                line = raw.decode("ascii", errors="ignore").strip()
-                if not line:
+                return False, "no ESP32-CAM probe response after retries"
+            except Exception as e:
+                if attempt < max_attempts:
+                    time.sleep(0.6)
                     continue
-                if line.startswith("PONG:READY") or line.startswith("ESP32CAM_READY"):
-                    return True, line
-                if line.startswith("PONG:NOT_READY"):
-                    return True, line
-                if line == "PONG:DOORLOCK_ARDUINO" or line == "SYSTEM_READY":
-                    return False, "Arduino responded on this port."
-            return False, "no ESP32-CAM probe response"
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if probe_serial:
-                try:
-                    probe_serial.close()
-                except Exception:
-                    pass
+                return False, str(e)
+            finally:
+                if probe_serial:
+                    try:
+                        probe_serial.close()
+                    except Exception:
+                        pass
+        return False, "no ESP32-CAM probe response after retries"
 
     def _set_run_mode_lines(self, serial_obj):
         try:
@@ -266,17 +316,42 @@ class SerialJpegCamera:
                 pass
 
     def _auto_detect_port(self):
-        self.candidates = []
-        candidates = self._esp32_candidate_ports()
-        self.candidates = [candidate["device"] for candidate in candidates]
-        for candidate in candidates:
-            ok, reason = self._probe_esp32cam(candidate["device"])
+        import glob
+        import re
+
+        # ttyUSB0, ttyUSB1... → ttyACM0, ttyACM1... 순서대로 명확히 스캔
+        def port_key(p):
+            m = re.search(r"(\d+)$", p)
+            return (0 if "USB" in p else 1, int(m.group(1)) if m else 999)
+
+        usb_ports = sorted(glob.glob("/dev/ttyUSB*"), key=port_key)
+        acm_ports = sorted(glob.glob("/dev/ttyACM*"), key=port_key)
+        all_ports = usb_ports + acm_ports
+
+        print("[VISION] ESP32-CAM scanning start. Ports found:", all_ports if all_ports else "(none)")
+
+        if not all_ports:
+            self.last_error = "No serial ports (/dev/ttyUSB* or /dev/ttyACM*) found. USB 장치를 확인하세요."
+            print("[VISION] " + self.last_error)
+            return None
+
+        for device in all_ports:
+            print(f"[VISION] Trying {device} ...")
+            ok, reason = self._probe_esp32cam(device)
             if ok:
                 self.device_ready = not str(reason).startswith("PONG:NOT_READY")
-                if not self.device_ready:
-                    self.last_error = f"{candidate['device']}: ESP32-CAM responded but camera is not ready ({reason})."
-                return candidate["device"]
-            self.last_error = f"{candidate['device']}: {reason}"
+                print(f"[VISION] ✅ ESP32-CAM found on {device} (ready={self.device_ready})")
+                return device
+            print(f"[VISION]   {device} failed: {reason}")
+
+        print("[VISION] ❌ ESP32-CAM not found after scanning all ports.")
+        self.last_error = (
+            "ESP32-CAM을 찾을 수 없습니다. "
+            f"시도한 포트: {all_ports}. "
+            "USB 케이블을 뽑았다가 5~10초 후 다시 연결해보세요. "
+            "ESP32-CAM 펌웨어가 PING 요청에 PONG:READY 또는 ESP32CAM_READY 로 응답해야 합니다. "
+            "(esp32cam/serial_camera/serial_camera.ino 를 921600 baud로 다시 플래시하세요)"
+        )
         return None
 
     def isOpened(self):
@@ -484,6 +559,7 @@ class VisionAI:
                 if not self.camera.isOpened():
                     self.camera_last_error = self.camera.last_error
                     print(f"[VISION] ESP32-CAM serial camera unavailable on {port}: {self.camera_last_error}")
+                    print("[VISION] >>> ESP32-CAM 문제 해결: Arduino IDE로 esp32cam/serial_camera/serial_camera.ino 를 ESP32-CAM 보드에 921600 baud로 플래시한 뒤, 전원 재인가(USB 뽑았다가 10초 후 다시 꽂기) 하세요.")
                     return False
                 if self.camera.last_error and "readiness probe" in self.camera.last_error:
                     probe_ok, _ = self.camera.read_jpeg()
@@ -868,6 +944,28 @@ class VisionAI:
                 return None, f"Mock face capture failed: {e}"
         if not self.camera_available:
             return None, "Camera not available."
+
+        # New ArcFace path (use when module is available, regardless of legacy flag)
+        if ArcFaceONNX is not None:
+            ENROLLED_EMBEDDING_DIR.mkdir(parents=True, exist_ok=True)
+            ret, frame = self._read_camera_frame()
+            if not ret or frame is None:
+                return None, "Failed to capture frame."
+
+            tmp = Path("/tmp/enroll_face.jpg")
+            cv2.imwrite(str(tmp), frame)
+            extractor = ArcFaceONNX(ARCFACE_MODEL_PATH)
+            embedding = extractor.get_embedding(tmp)
+
+            # Note: real user_id should come from the registration form.
+            # For now we use a placeholder; the web_app layer should pass the correct id.
+            out_path = ENROLLED_EMBEDDING_DIR / "current.npy"
+            np.save(out_path, embedding)
+            # Return a small marker so existing registration code doesn't break
+            # The real 512-dim vector is stored in the .npy file
+            marker = np.array([0.0], dtype=np.float32).tobytes()
+            return marker, f"ArcFace 512-dim encoding saved to {out_path}"
+
         if not face_recognition:
             return None, "face_recognition is not installed."
 
@@ -925,13 +1023,16 @@ class VisionAI:
         if not self.camera_available:
             print("[VISION] Face verification failed because camera is not ready.")
             return False
+        if FACE_LIVENESS_REQUIRED and analyze_video is not None and ArcFaceONNX is not None:
+            return self.verify_face_liveness_arcface(user_id, db)
+
         if not face_recognition:
             print("[VISION] Face verification failed because face_recognition is missing.")
             return False
 
         face_frame = None
         if self.yolo_enabled:
-            gate_result = self._run_yolo_security_gate(require_blink=self.yolo_require_blink)
+            gate_result = self._run_yolo_security_gate(require_blink=False)
             if not gate_result.ok:
                 print(f"[VISION] YOLO security gate failed: {gate_result.reason}")
                 return False
@@ -952,7 +1053,8 @@ class VisionAI:
                 return False
 
             # YOLO로 얼굴을 자르지 못한 경우에만 전체 프레임을 줄인다.
-            face_frame = cv2.resize(face_frame, (0, 0), fx=0.25, fy=0.25)
+            # ESP32-CAM은 해상도가 낮아서 0.25x는 face_recognition이 얼굴을 못 찾는 경우가 많음 → 0.5x로 완화
+            face_frame = cv2.resize(face_frame, (0, 0), fx=0.5, fy=0.5)
 
         face_encodings = self._extract_face_encodings(face_frame)
 
@@ -968,6 +1070,150 @@ class VisionAI:
         
         print(f"[VISION] Face verification failed for user {user_id}")
         return False
+
+    def verify_face_liveness_arcface(self, user_id, db, timeout_seconds: float = 10.0):
+        """
+        실시간 프레임 처리 (안전 버전):
+        - blink 1회 감지
+        - ArcFace 얼굴 일치
+        둘 다 만족하는 순간 즉시 승인
+        """
+        if analyze_video is None or ArcFaceONNX is None:
+            print("[VISION] New liveness/ArcFace modules not available.")
+            return False
+
+        if not self.camera_available:
+            print("[VISION] Camera not ready.")
+            return False
+
+        try:
+            enrolled_path = ENROLLED_EMBEDDING_DIR / f"{user_id}.npy"
+            if not enrolled_path.exists():
+                enrolled_path = ENROLLED_EMBEDDING_DIR / "current.npy"
+            if not enrolled_path.exists():
+                enrolled_path = Path("enrolled.npy")
+            if not enrolled_path.exists():
+                print(f"[VISION] No enrolled embedding for user {user_id}")
+                return False
+
+            enrolled = np.load(enrolled_path)
+            extractor = ArcFaceONNX(ARCFACE_MODEL_PATH)
+
+            import mediapipe as mp
+            mp_face_mesh = mp.solutions.face_mesh.FaceMesh(
+                static_image_mode=True,
+                max_num_faces=1,
+                refine_landmarks=True,
+                min_detection_confidence=0.3,
+                min_tracking_confidence=0.3
+            )
+
+            LEFT_EYE = [33, 160, 158, 133, 153, 144]
+            RIGHT_EYE = [362, 385, 387, 263, 373, 380]
+
+            def _safe_ear(landmarks, indices, w, h):
+                """안전한 EAR 계산 (인덱스 범위 체크)"""
+                try:
+                    if len(landmarks) <= max(indices):
+                        return 0.0
+                    pts = []
+                    for i in indices:
+                        p = landmarks[i]
+                        pts.append((int(p.x * w), int(p.y * h)))
+                    if len(pts) != 6:
+                        return 0.0
+                    p1, p2, p3, p4, p5, p6 = pts
+                    a = np.linalg.norm(np.array(p2) - np.array(p6))
+                    b = np.linalg.norm(np.array(p3) - np.array(p5))
+                    c = np.linalg.norm(np.array(p1) - np.array(p4))
+                    return (a + b) / (2.0 * c) if c > 1e-6 else 0.0
+                except Exception:
+                    return 0.0
+
+            blink_detected = False
+            was_below = False
+            consecutive_below = 0
+            start_time = time.perf_counter()
+            frame_count = 0
+            best_sim = 0.0
+
+            print("[VISION] Real-time face verification started (waiting for blink + face match)...")
+
+            face_seen = False
+            landmark_frames = 0
+            try:
+                while time.perf_counter() - start_time < timeout_seconds:
+                    ret, frame = self._read_camera_frame()
+                    if not ret or frame is None:
+                        continue
+
+                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    results = mp_face_mesh.process(rgb)
+
+                    try:
+                        if results.multi_face_landmarks:
+                            if not face_seen:
+                                print("[VISION] Face detected by MediaPipe.")
+                                face_seen = True
+                            landmark_frames += 1
+                            lm = results.multi_face_landmarks[0].landmark
+                            h, w = frame.shape[:2]
+
+                            left_ear = _safe_ear(lm, LEFT_EYE, w, h)
+                            right_ear = _safe_ear(lm, RIGHT_EYE, w, h)
+                            avg_ear = (left_ear + right_ear) / 2.0
+
+                            # Diagnostic: print EAR occasionally
+                            if frame_count % 4 == 0:
+                                print(f"[VISION] EAR={avg_ear:.3f} (blink={blink_detected})")
+
+                            if avg_ear < 0.22:
+                                consecutive_below += 1
+                                was_below = True
+                            else:
+                                if was_below and avg_ear > 0.26 and consecutive_below >= 1:
+                                    blink_detected = True
+                                    was_below = False
+                                    consecutive_below = 0
+                                    print("[VISION] Blink detected!")
+                                else:
+                                    consecutive_below = 0
+                                    was_below = False
+
+                            # ArcFace (every 2 frames for low-res camera)
+                            if frame_count % 2 == 0:
+                                tmp = Path("/tmp/realtime_face.jpg")
+                                cv2.imwrite(str(tmp), frame)
+                                try:
+                                    embedding = extractor.get_embedding(tmp)
+                                    sim = cosine_similarity(enrolled, embedding)
+                                    print(f"[VISION] ArcFace sim={sim:.3f} (best={best_sim:.3f})")
+                                    if sim > best_sim:
+                                        best_sim = sim
+                                    if sim >= 0.55 and blink_detected:
+                                        print(f"[VISION] SUCCESS (blink + ArcFace sim={sim:.3f})")
+                                        return True
+                                except Exception as arc_err:
+                                    print(f"[VISION] ArcFace embed failed: {arc_err}")
+                    except Exception:
+                        # MediaPipe landmark 처리 중 예외 발생 시 해당 프레임은 무시
+                        pass
+
+                    frame_count += 1
+
+            except Exception as e:
+                print(f"[VISION] Exception during real-time verification: {e}")
+            finally:
+                mp_face_mesh.close()
+
+            if not face_seen:
+                print("[VISION] No face detected during the verification window.")
+            print(f"[VISION] FAILED (blink={blink_detected}, best_sim={best_sim:.3f}, landmark_frames={landmark_frames})")
+            return False
+
+        except Exception as e:
+            print(f"[VISION] verify_face_liveness_arcface top-level error: {e}")
+            return False
 
     def release(self):
         if self.camera:

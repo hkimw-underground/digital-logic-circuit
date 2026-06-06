@@ -1,0 +1,7 @@
+# Minimal working set for liveness + 512-dim ArcFace ONNX
+numpy==1.26.4
+opencv-python==4.9.0.80
+mediapipe==0.10.14
+onnxruntime==1.17.1
+ultralytics==8.2.0
+protobuf==4.25.3

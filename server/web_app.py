@@ -235,6 +235,8 @@ class CameraStreamHub:
 
     def _capture_loop(self):
         frame_interval = 1.0 / max(1.0, self.max_fps)
+        last_good_jpeg = None
+        last_good_at = 0.0
         while True:
             with self.condition:
                 if self.stopped:
@@ -247,28 +249,34 @@ class CameraStreamHub:
 
             started = time.monotonic()
             jpeg = self._capture_frame()
+            now = time.monotonic()
             if jpeg:
+                last_good_jpeg = jpeg
+                last_good_at = now
                 self._publish(jpeg)
+            elif last_good_jpeg and (now - last_good_at) < 3.0:
+                # 최근에 성공한 프레임이 있으면 placeholder로 바로 가지 않음 (깜박임 방지)
+                pass
             elapsed = time.monotonic() - started
             time.sleep(max(0.02, frame_interval - elapsed))
 
     def frames(self):
         self._client_started()
         last_seq = -1
+        last_good_jpeg = None
+        last_good_at = 0.0
         try:
             while True:
                 with self.condition:
-                    if self.latest_jpeg is None and last_seq < 0:
-                        jpeg = self._placeholder()
+                    now = time.monotonic()
+                    if self.latest_jpeg is not None and self.latest_seq != last_seq:
+                        last_good_jpeg = self.latest_jpeg
+                        last_good_at = now
                         last_seq = self.latest_seq
+                    if last_good_jpeg and (now - last_good_at) < 2.0:
+                        jpeg = last_good_jpeg
                     else:
-                        if self.latest_seq == last_seq:
-                            self.condition.wait(timeout=0.8)
-                        if self.latest_jpeg is not None and self.latest_seq != last_seq:
-                            jpeg = self.latest_jpeg
-                            last_seq = self.latest_seq
-                        else:
-                            jpeg = self.latest_jpeg or self._placeholder()
+                        jpeg = self._placeholder()
                 yield _mjpeg_chunk(jpeg)
         finally:
             self._client_finished()
@@ -276,21 +284,23 @@ class CameraStreamHub:
     async def async_frames(self, request=None):
         self._client_started()
         last_seq = -1
+        last_good_jpeg = None
+        last_good_at = 0.0
         try:
             while True:
                 if request is not None and await request.is_disconnected():
                     return
                 with self.condition:
+                    now = time.monotonic()
                     if self.latest_jpeg is not None and self.latest_seq != last_seq:
-                        jpeg = self.latest_jpeg
+                        last_good_jpeg = self.latest_jpeg
+                        last_good_at = now
                         last_seq = self.latest_seq
-                    elif self.latest_jpeg is None and last_seq < 0:
-                        jpeg = self._placeholder()
-                        last_seq = self.latest_seq
+                    if last_good_jpeg and (now - last_good_at) < 2.0:
+                        jpeg = last_good_jpeg
                     else:
-                        jpeg = None
-                if jpeg is not None:
-                    yield _mjpeg_chunk(jpeg)
+                        jpeg = self._placeholder()
+                yield _mjpeg_chunk(jpeg)
                 await asyncio.sleep(0.05)
         finally:
             self._client_finished()
@@ -540,9 +550,14 @@ async def reconnect_camera():
     reset_camera_stream()
     ok = current_vision.reconnect()
     reset_camera_stream()
+    if ok:
+        return {"success": True, "message": "Camera reconnected.", "status": status_payload()}
+    # 실패 시 실용적인 안내 메시지 반환 (하드웨어 페이지에서 표시)
+    err = getattr(current_vision, "last_error", None) or "ESP32-CAM probe failed."
+    hint = "USB 케이블을 뽑았다가 5~10초 후 다시 연결해보세요."
     return {
-        "success": bool(ok),
-        "message": "Camera reconnected." if ok else "Camera reconnect failed.",
+        "success": False,
+        "message": f"{err} {hint}",
         "status": status_payload(),
     }
 
@@ -597,6 +612,32 @@ async def control_lockdown():
         cmd_callback("LOCKDOWN")
         return {"success": True, "message": "Lockdown command sent."}
     raise HTTPException(status_code=500, detail="Command callback not configured.")
+
+@app.get("/api/lockdown/status")
+async def get_lockdown_status():
+    if doorlock_server:
+        try:
+            failures = doorlock_server.recent_failure_count
+            locked = failures >= doorlock_server.lockdown_failure_limit
+            return {
+                "locked": locked,
+                "recent_failures": failures,
+                "limit": doorlock_server.lockdown_failure_limit
+            }
+        except Exception:
+            pass
+    return {"locked": False, "recent_failures": 0, "limit": 10}
+
+@app.post("/api/lockdown/clear")
+async def clear_lockdown():
+    if doorlock_server:
+        try:
+            doorlock_server.recent_failure_count = 0
+            doorlock_server.last_failed_attempt = 0
+            return {"success": True, "message": "Lockdown cleared. Failure count reset."}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+    return {"success": False, "message": "Server not available"}
 
 def start_web_server():
     import uvicorn

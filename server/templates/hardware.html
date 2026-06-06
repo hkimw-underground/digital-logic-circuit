@@ -178,9 +178,14 @@
                 const payload = await response.json().catch(() => ({}));
                 if (payload.status) updateHardwareStatus(payload.status);
                 else await fetchStatus();
-                document.getElementById("status-event-line").textContent = `${targetName} 완료 / ${payload.message || "상태를 다시 동기화했습니다."}`;
+                const msg = payload.message || "상태를 다시 동기화했습니다.";
+                document.getElementById("status-event-line").textContent = `${targetName} ${payload.success === false ? "실패" : "완료"} / ${msg}`;
             } catch (error) {
-                document.getElementById("status-event-line").textContent = `${targetName} 실패 / ${error}`;
+                let msg = `${targetName} 실패`;
+                if (target === "camera" || target === "all") {
+                    msg += " — USB 케이블을 뽑았다가 5~10초 후 다시 연결한 뒤 재시도하세요.";
+                }
+                document.getElementById("status-event-line").textContent = msg;
             } finally {
                 setReconnectButtons(false);
             }

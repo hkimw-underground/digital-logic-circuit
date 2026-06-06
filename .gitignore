@@ -39,12 +39,24 @@ server/*.pem
 *.crt
 
 # Model weights and generated vision artifacts
-models/*.pt
-models/*.onnx
-models/*.engine
-models/*.bin
-models/*.xml
+**/*.pt
+**/*.onnx
+**/*.engine
+**/*.bin
+**/*.xml
+models/
+yolo_vulkan_test/models/
 runs/
+
+# Video and image test artifacts
+**/*.mp4
+**/*.avi
+face_samples/
+yolo_vulkan_test/face_samples/
+yolo_vulkan_test/test_image.jpg
+yolo_vulkan_test/test_video.mp4
+yolo_vulkan_test/my_face_test.mp4
+captures/
 
 # Arduino local build output and old sketches
 arduino/build/

@@ -44,6 +44,7 @@ class DoorLockServer:
         }
         self.last_failed_attempt = 0
         self.last_lockdown_alert = None
+        self.recent_failure_count = 0         # in-memory 실패 카운트 (Lockdown 해제 시 초기화)
         self.rate_limit_seconds = self._min_float(RATE_LIMIT_SECONDS, 0.0)
         self.lockdown_failure_limit = self._min_int(LOCKDOWN_FAILURE_LIMIT, 1)
         self.lockdown_delay_seconds = self._min_float(LOCKDOWN_DELAY_SECONDS, 0.0)
@@ -417,20 +418,19 @@ class DoorLockServer:
             print(f"[NFC_CAPTURE] Captured NFC UID for registration: {value}")
             return
 
-        # 최근 실패 기록이 너무 많으면 잠시 입력을 무시한다.
-        recent_failures = self.db.get_recent_failures_count("ALL")
-        if recent_failures >= self.lockdown_failure_limit:
+        # in-memory 실패 카운트로 Lockdown 판단 (해제 버튼 누르면 0으로 초기화)
+        if self.recent_failure_count >= self.lockdown_failure_limit:
             print("[LOCKDOWN] Too many failed attempts recently. Inputs are paused.")
             if (
                 self.last_lockdown_alert is None
                 or now - self.last_lockdown_alert >= self.lockdown_alert_cooldown_seconds
             ):
                 self.notifier.send_security_alert(
-                    f"Doorlock inputs paused\n{self.lockdown_failure_limit}+ failed attempts detected within the last hour."
+                    f"Doorlock inputs paused\n{self.lockdown_failure_limit}+ failed attempts detected."
                 )
                 self.last_lockdown_alert = now
             self.send_command("LOCKDOWN")
-            time.sleep(self.lockdown_delay_seconds) # 잠시 대기
+            time.sleep(self.lockdown_delay_seconds)
             return
 
         # 실패 직후에는 바로 재시도하지 못하게 한다.
@@ -452,22 +452,26 @@ class DoorLockServer:
             safe_username = self._safe_display_text(username)
             print(f"[AUTH] {safe_username} verified via {method}. Running face check...")
             self.db.log_access(user_id, method, "1ST_AUTH_SUCCESS")
+            self.send_command("1ST_SUCCESS")  # 1차 인증 성공 피드백 (얼굴 인식 대기 안내)
             
             if self.vision.verify_face(user_id, self.db):
                 print(f"[AUTH] Face check passed. Opening door for {safe_username}.")
                 self.db.log_access(user_id, method, "FINAL_SUCCESS")
+                self.recent_failure_count = 0
                 self.send_command("OPEN_DOOR")
             else:
                 self.last_failed_attempt = time.monotonic()
-                print(f"[AUTH] Face check failed for {safe_username}.")
+                self.recent_failure_count += 1
+                print(f"[AUTH] Face check failed for {safe_username}. (failures={self.recent_failure_count})")
                 self.send_command("AUTH_FAIL")
                 snapshot = self.capture_snapshot()
                 self.db.log_access(user_id, method, "FINAL_FAIL", snapshot=snapshot)
                 self.notifier.send_security_alert(f"Failed 2FA for registered user: **{safe_username}**", snapshot)
         else:
             self.last_failed_attempt = time.monotonic()
+            self.recent_failure_count += 1
             safe_value = self._redact_auth_value(auth_type, value)
-            print(f"[DENIED] Unauthorized {auth_type} attempt: {safe_value}")
+            print(f"[DENIED] Unauthorized {auth_type} attempt: {safe_value} (failures={self.recent_failure_count})")
             self.send_command("AUTH_FAIL")
             snapshot = self.capture_snapshot()
             self.db.log_access(None, auth_type, "UNAUTHORIZED", snapshot=snapshot)

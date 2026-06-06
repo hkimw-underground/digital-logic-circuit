@@ -95,10 +95,16 @@ MOCK_FACE_IDENTITY = os.getenv("DOORLOCK_MOCK_FACE_IDENTITY", "demo-person")
 ALLOW_UNENROLLED_FACE = _bool_env("DOORLOCK_ALLOW_UNENROLLED_FACE", False)
 FACE_MATCH_TOLERANCE = _float_env("DOORLOCK_FACE_TOLERANCE", 0.6)
 FACE_LIVENESS_REQUIRED = _bool_env("DOORLOCK_FACE_LIVENESS_REQUIRED", True)
+ARCFACE_MODEL_PATH = Path(
+    os.getenv("DOORLOCK_ARCFACE_MODEL_PATH", str(PROJECT_ROOT / "yolo_vulkan_test" / "models" / "arcface.onnx"))
+).expanduser()
+ENROLLED_EMBEDDING_DIR = Path(
+    os.getenv("DOORLOCK_ENROLLED_EMBEDDING_DIR", str(PROJECT_ROOT / "face_encodings"))
+).expanduser()
 
 YOLO_ENABLED = _bool_env("DOORLOCK_YOLO_ENABLED", True)
 YOLO_MODEL_PATH = Path(
-    os.getenv("DOORLOCK_YOLO_MODEL_PATH", str(PROJECT_ROOT / "models" / "doorlock_yolov8n.pt"))
+    os.getenv("DOORLOCK_YOLO_MODEL_PATH", str(PROJECT_ROOT / "yolo_vulkan_test" / "models" / "yolov8s.onnx"))
 ).expanduser()
 YOLO_CONFIDENCE = _float_env("DOORLOCK_YOLO_CONFIDENCE", 0.35)
 YOLO_OBSERVATION_SECONDS = _float_env("DOORLOCK_YOLO_OBSERVATION_SECONDS", 4.5)

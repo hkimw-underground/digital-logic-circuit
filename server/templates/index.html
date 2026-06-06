@@ -30,9 +30,7 @@
     </header>
 
     <main class="ide-shell">
-        <div id="alert-box" class="ide-alert" role="alert">
-            <span class="material-symbols-rounded me-2" aria-hidden="true">warning</span>보안 경고: 인증 실패가 반복되었습니다.
-        </div>
+        <!-- 상단 보안 경고 배너는 오른쪽 하단 토스트로 통일 (기존 알림 시스템과 일관성 유지) -->
 
         <section class="overview-rail" aria-label="현재 시스템 요약">
             <div id="summary-system-card" class="overview-item warn">
@@ -129,6 +127,14 @@
                         <span class="material-symbols-rounded" aria-hidden="true">warning</span>
                     </button>
                 </div>
+
+                <!-- Lockdown 제어 -->
+                <div class="lockdown-control mt-2">
+                    <button onclick="clearLockdown()" class="btn-command secondary" style="background:#f59e0b; color:#111827;">
+                        <span>Lockdown 해제</span>
+                    </button>
+                    <span id="lockdown-status" class="ms-2 text-sm text-muted"></span>
+                </div>
                 <div class="command-meta">
                     <div class="metric">
                         <div class="metric-label">명령 대상</div>
@@ -219,6 +225,8 @@
         document.addEventListener("DOMContentLoaded", () => {
             snapshotModal = new bootstrap.Modal(document.getElementById('snapshotModal'));
             setupCameraFeed('.cam-feed');
+            loadLockdownStatus();
+            setInterval(loadLockdownStatus, 3000); // 실패 카운트 즉시 반영을 위해 3초마다 갱신
         });
 
         function setupCameraFeed(selector) {
@@ -272,6 +280,43 @@
                 }
             } catch(e) {
                 showToast('명령 전송 중 네트워크 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        let _lastLockdownState = false;
+
+        async function loadLockdownStatus() {
+            try {
+                const res = await fetch('/api/lockdown/status');
+                const data = await res.json();
+                const el = document.getElementById('lockdown-status');
+                if (!el) return;
+
+                if (data.locked) {
+                    el.innerHTML = `<span class="text-red-600 font-semibold">LOCKDOWN (${data.recent_failures}/${data.limit})</span>`;
+                    if (!_lastLockdownState) {
+                        showToast(`보안 경고: 인증 실패가 ${data.recent_failures}회 반복되었습니다.`, 'error');
+                    }
+                } else {
+                    el.innerHTML = `<span class="text-green-600">정상 (${data.recent_failures}/${data.limit})</span>`;
+                }
+                _lastLockdownState = data.locked;
+            } catch(e) {}
+        }
+
+        async function clearLockdown() {
+            try {
+                const res = await fetch('/api/lockdown/clear', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Lockdown 해제 완료', 'success');
+                    // 즉시 상태 갱신
+                    await loadLockdownStatus();
+                } else {
+                    showToast(data.message || '해제 실패', 'error');
+                }
+            } catch(e) {
+                showToast('Lockdown 해제 중 오류', 'error');
             }
         }
 

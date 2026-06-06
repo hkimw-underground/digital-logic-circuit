@@ -508,20 +508,26 @@ class Database:
             result = cursor.fetchone()
         return result["snapshot"] if result else None
 
-    def get_recent_failures_count(self, method_value="ALL"):
+    def get_recent_failures_count(self, method_value="ALL", since=None):
         self._ensure_open()
         params = []
         method_filter = ""
+        time_filter = "AND datetime(timestamp) >= datetime('now', 'localtime', '-1 hour')"
+
         if method_value and method_value != "ALL":
             method_filter = "AND method = ?"
             params.append(method_value)
+
+        if since:
+            time_filter = "AND timestamp >= ?"
+            params.append(since)
 
         with self.lock:
             cursor = self.conn.cursor()
             cursor.execute(f'''
                 SELECT COUNT(*) FROM access_logs 
                 WHERE status IN ('UNAUTHORIZED', 'FINAL_FAIL') 
-                AND datetime(timestamp) >= datetime('now', 'localtime', '-1 hour')
+                {time_filter}
                 {method_filter}
             ''', params)
             return cursor.fetchone()[0]

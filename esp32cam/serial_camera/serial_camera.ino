@@ -25,7 +25,7 @@
 #define PCLK_GPIO_NUM     22
 
 static bool cameraReady = false;
-static const unsigned long SERIAL_BAUD = 2000000;
+static const unsigned long SERIAL_BAUD = 921600;
 
 static void sendError(const char *message) {
   Serial.print("ERR:");
@@ -54,7 +54,7 @@ static bool initCamera() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.frame_size = psramFound() ? FRAMESIZE_VGA : FRAMESIZE_QVGA;
+  config.frame_size = FRAMESIZE_CIF;   // 400x296 (중간 해상도, VGA보다 데이터량 크게 감소)
   config.grab_mode = psramFound() ? CAMERA_GRAB_LATEST : CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = psramFound() ? CAMERA_FB_IN_PSRAM : CAMERA_FB_IN_DRAM;
   config.jpeg_quality = 10;
